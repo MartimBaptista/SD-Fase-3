@@ -72,6 +72,9 @@ switch(op) {
         break;
 
     case MESSAGE_T__OPCODE__OP_DEL: ;
+
+        //TODO
+
         printf("Requested: del %s\n", msg->entry->key);
 
         //executa tree_del
@@ -110,6 +113,9 @@ switch(op) {
         break;
 
     case MESSAGE_T__OPCODE__OP_PUT: ;
+
+        //TODO
+
         printf("Requested: put %s %s\n", msg->entry->key, (char*)msg->entry->data.data);
 
         //cria data para tree_put
