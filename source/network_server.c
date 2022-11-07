@@ -188,7 +188,36 @@ int network_main_loop(int listening_socket){
         printf("Disconecting from port: %d\n", connsockfd);
         close(connsockfd);
     }
-}
+
+    /* TODO
+     *                              --Esboço do algoritmo a ser implementado--
+     *
+     * adiciona listening_socket a desc_set.                            //desc_set corresponde a um conjunto de file descriptors
+     *
+     * while (poll(desc_set) >= 0) {                                     //Espera por dados nos sockets abertos 
+     *   if (listening_socket tem dados para ler) {                      //Verifica se tem novo pedido de conexão
+     *     connsockfd = accept(listening_socket); 
+     *     adiciona connsockfd a desc_set 
+     *   } 
+     *   for (all socket s em desc_set, excluindo listening_socket) {    //Verifica restantes sockets 
+     *     if (s tem dados para ler) { 
+     *       message = network_receive(s); 
+     *       if (message é NULL) {                                       //Sinal de que a conexão foi fechada pelo cliente  
+     *         close(s); 
+     *         remove s de desc_set 
+     *       } else { 
+     *         invoke(message);                                          //Executa pedido contido em message 
+     *         network_send(message);                                    //Envia resposta contida em message 
+     *       } 
+     *     } 
+     *     if (s com erro ou POLLHUP) { 
+     *       close(s); 
+     *       remove s de desc_set 
+     *     } 
+     *   } 
+     * } 
+     */ 
+} 
 
 /* A função network_server_close() liberta os recursos alocados por
  * network_server_init().
