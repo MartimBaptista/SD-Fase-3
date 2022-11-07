@@ -18,8 +18,9 @@ struct request_t *queue_head;
  * Retorna 0 (OK) ou -1 (erro, por exemplo OUT OF MEMORY) 
  */
 int tree_skel_init(int N){
-    //TODO crete threads
     tree = tree_create();
+    
+    //TODO crete threads
 
     if(tree == NULL)
         return -1;
