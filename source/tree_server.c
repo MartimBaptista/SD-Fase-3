@@ -4,9 +4,9 @@
 
 int main(int argc, char *argv[]){
 
-    if (argc != 2){
-        printf("Uso: ./tree_server <porto_servidor>\n");
-        printf("Exemplo de uso: ./tree_server 12345\n");
+    if (argc != 3){
+        printf("Uso: ./tree_server <porto_servidor> <N>\n");
+        printf("Exemplo de uso: ./tree_server 12345 3\n");
         return -1;
     }
 
@@ -14,7 +14,7 @@ int main(int argc, char *argv[]){
 
     int listening_socket_fd = network_server_init(listening_socket_port);
 
-    if(tree_skel_init() < 0){
+    if(tree_skel_init(atoi(argv[2])) < 0){
         printf("Error Creating the tree\n");
         return -1;
     }
