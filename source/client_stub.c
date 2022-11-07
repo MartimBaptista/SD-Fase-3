@@ -271,3 +271,10 @@ void **rtree_get_values(struct rtree_t *rtree) {
 
     return (void**)ret;
 }
+
+/* Verifica se a operação identificada por op_n foi executada. 
+ */ 
+int rtree_verify(struct rtree_t *rtree, int op_n){
+    //TODO
+    return 0;
+}
