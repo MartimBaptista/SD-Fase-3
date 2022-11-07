@@ -84,12 +84,13 @@ int main(int argc, char *argv[]){
             struct entry_t *entry = entry_create(key, data);
 
             //Putting it in tree
-            if(rtree_put(rtree, entry) < 0){
+            int op_n = rtree_put(rtree, entry);
+            if(op_n < 0){
                 perror("Error on put");
                 continue;
             }
 
-            printf("Entry has been put into the tree.\n");
+            printf("Rquest to put into tree received, assigned op_n: %d.\n", op_n);
 
             entry_destroy(entry);
         }
@@ -138,19 +139,20 @@ int main(int argc, char *argv[]){
             strcpy(key, key_s);
 
             //Delliting it from the tree
-            if(rtree_del(rtree, key) < 0){
+            int op_n = rtree_del(rtree, key);
+            if(op_n < 0){
                 //In case there is an entry with that key
                 if(strcmp(strerror(errno), "Success") == 0){
                     printf("Key not found on tree.\n");
                     continue;
                 }
-                //In case there isn't an entry with that key
+                //In case of error
                 else{
                     perror("Error on del");
                     continue;
                 }
             }
-            printf("Entry deleted from tree.\n");
+            printf("Rquest to delete from tree received, assigned op_n: %d.\n", op_n);
             free(key);
         }
 
