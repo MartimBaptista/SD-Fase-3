@@ -177,7 +177,7 @@ int rtree_size(struct rtree_t *rtree) {
     MessageT *answer = network_send_receive(rtree, &msg);
 
     if (answer->opcode == MESSAGE_T__OPCODE__OP_SIZE + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT){
-        return answer->size;
+        return answer->result;
     }
     
     return -1;
@@ -198,7 +198,7 @@ int rtree_height(struct rtree_t *rtree) {
     MessageT *answer = network_send_receive(rtree, &msg);
 
     if (answer->opcode == MESSAGE_T__OPCODE__OP_HEIGHT + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT){
-        return answer->size;
+        return answer->result;
     }
     
     return -1; 
@@ -287,8 +287,8 @@ int rtree_verify(struct rtree_t *rtree, int op_n){
 
     MessageT *answer = network_send_receive(rtree, &msg);
 
-    if (answer->opcode == MESSAGE_T__OPCODE__OP_VERIFY + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT && answer->size != NULL){
-        return answer->size;
+    if (answer->opcode == MESSAGE_T__OPCODE__OP_VERIFY + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT && answer->result != NULL){
+        return answer->result;
     }
     
     return -1;

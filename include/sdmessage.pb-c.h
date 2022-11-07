@@ -66,7 +66,7 @@ struct  _MessageT
   MessageT__Entry *entry;
   size_t n_values;
   ProtobufCBinaryData *values;
-  int32_t size;
+  int32_t result;
   MessageT__Opcode opcode;
   MessageT__CType c_type;
   size_t n_keys;

@@ -54,7 +54,7 @@ switch(op) {
 
         msg->opcode = MESSAGE_T__OPCODE__OP_SIZE + 1;
         msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
-        msg->size = tree_size(tree);
+        msg->result = tree_size(tree);
         return 0;
 
         break;
@@ -62,7 +62,7 @@ switch(op) {
     case MESSAGE_T__OPCODE__OP_HEIGHT: ;
         printf("Requested: height\n");
 
-        msg->size = tree_height(tree);
+        msg->result = tree_height(tree);
         msg->opcode = MESSAGE_T__OPCODE__OP_HEIGHT + 1;
         msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
         return 0;

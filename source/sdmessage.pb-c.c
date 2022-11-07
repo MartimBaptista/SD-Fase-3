@@ -222,12 +222,12 @@ static const ProtobufCFieldDescriptor message_t__field_descriptors[7] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "size",
+    "result",
     3,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
-    offsetof(MessageT, size),
+    offsetof(MessageT, result),
     NULL,
     NULL,
     0,             /* flags */
@@ -288,7 +288,7 @@ static const unsigned message_t__field_indices_by_name[] = {
   5,   /* field[5] = keys */
   6,   /* field[6] = op_n */
   3,   /* field[3] = opcode */
-  2,   /* field[2] = size */
+  2,   /* field[2] = result */
   1,   /* field[1] = values */
 };
 static const ProtobufCIntRange message_t__number_ranges[1 + 1] =

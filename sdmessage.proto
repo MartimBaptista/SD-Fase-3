@@ -8,9 +8,7 @@ message message_t
         Entry entry = 1;
         repeated bytes values = 2;
 
-
-        int32 size = 3;
-
+        int32 result = 3;
 
         enum Opcode {
                 OP_BAD     	= 0;
