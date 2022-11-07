@@ -76,9 +76,8 @@ switch(op) {
 
         //caso de erro em tree_del
         if(del == -1){
-          msg->opcode = MESSAGE_T__OPCODE__OP_ERROR;
-          msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
-          return 0;
+            printf("Error on Delete\n");
+            return -1;
         }
 
         msg->opcode = MESSAGE_T__OPCODE__OP_DEL + 1;
@@ -111,7 +110,6 @@ switch(op) {
         printf("Requested: put %s %s\n", msg->entry->key, (char*)msg->entry->data.data);
 
         //cria data para tree_put
-        //key = msg->entry->key;
         key = malloc(strlen(msg->entry->key) + 1);
         strcpy(key, msg->entry->key);
         void * buf = malloc(msg->entry->data.len);
@@ -119,12 +117,9 @@ switch(op) {
         data = data_create2(msg->entry->data.len, buf);
 
         //caso de erro em tree_put
-
         if(tree_put(tree,key,data) == -1 ){
-            msg->opcode = MESSAGE_T__OPCODE__OP_ERROR;
-            msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
             printf("Error on Put\n");
-            return 0;
+            return -1;
         }
 
         msg->opcode = MESSAGE_T__OPCODE__OP_PUT + 1;
@@ -185,9 +180,10 @@ switch(op) {
         break;
 
     case MESSAGE_T__OPCODE__OP_ERROR: ;
-        printf("Request not recognised.\n");
+        printf("Received message signaling error.\n");
         return -1;
     default: ;
+        printf("Request not recognised.\n");
        return -1;
     }   
 

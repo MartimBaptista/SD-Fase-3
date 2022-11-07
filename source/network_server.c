@@ -178,7 +178,8 @@ int network_main_loop(int listening_socket){
 
             if(invoke(msg) < 0){
                 printf("Error on invoke\n");
-                //TODO change message here to answer error to cliente
+                msg->opcode = MESSAGE_T__OPCODE__OP_ERROR;
+                msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
             }
 
             network_send(connsockfd, msg);
