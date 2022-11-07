@@ -6,8 +6,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <signal.h>
+
 
 #define BUFFERSIZE 500 //max input size
+
+void sigpipe_handler(int unused){
+    printf("Connection to server broken!\n");
+    printf("Closing program.\n");
+    exit(-1);
+}
 
 int main(int argc, char *argv[]){
     //Checking arguments
@@ -25,6 +33,9 @@ int main(int argc, char *argv[]){
     }
 
     printf("Connected to server.\n");
+
+
+    sigaction(SIGPIPE, &(struct sigaction){sigpipe_handler}, NULL);
 
     const char s[2] = " ";
     const char f[2] = "\0";
