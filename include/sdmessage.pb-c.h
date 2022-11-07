@@ -71,10 +71,11 @@ struct  _MessageT
   MessageT__CType c_type;
   size_t n_keys;
   char **keys;
+  int32_t op_n;
 };
 #define MESSAGE_T__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&message_t__descriptor) \
-    , NULL, 0,NULL, 0, MESSAGE_T__OPCODE__OP_BAD, MESSAGE_T__C_TYPE__CT_BAD, 0,NULL }
+    , NULL, 0,NULL, 0, MESSAGE_T__OPCODE__OP_BAD, MESSAGE_T__C_TYPE__CT_BAD, 0,NULL, 0 }
 
 
 /* MessageT__Entry methods */
