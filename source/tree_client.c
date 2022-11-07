@@ -164,11 +164,15 @@ int main(int argc, char *argv[]){
             }
 
             int op_n = atoi(key_s);
-            printf("Process with op number: %d has ", op_n);
-            if(rtree_verify(rtree, op_n))
-                printf("been processed.\n");
-            else
-                printf("not been processed.\n");
+            int res = rtree_verify(rtree, op_n);
+            printf("Process with op number: %d ", op_n);
+            if(res == 1)
+                printf("has been processed.\n");
+            else if(res == 0)
+                printf("has not been processed.\n");
+            else{
+                printf("doesnt exist, or an error ocorred.\n");
+            }
         }
 
         //CASE SIZE:

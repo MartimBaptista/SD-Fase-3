@@ -48,6 +48,10 @@ int rtree_disconnect(struct rtree_t *rtree) {
  * Devolve 0 (ok, em adição/substituição) ou -1 (problemas).
  */
 int rtree_put(struct rtree_t *rtree, struct entry_t *entry) {
+    
+    //TODO
+    //Recieve op_n
+
     MessageT msg;
     MessageT__Entry msg_entry;
 
@@ -132,6 +136,10 @@ struct data_t *rtree_get(struct rtree_t *rtree, char *key) {
  * Devolve: 0 (ok), -1 (key not found ou problemas).
  */
 int rtree_del(struct rtree_t *rtree, char *key) {
+
+    //TODO
+    //Recieve op_n
+
     MessageT msg;
     MessageT__Entry msg_entry;
 
@@ -276,6 +284,20 @@ void **rtree_get_values(struct rtree_t *rtree) {
 /* Verifica se a operação identificada por op_n foi executada. 
  */ 
 int rtree_verify(struct rtree_t *rtree, int op_n){
-    //TODO
-    return 0;
+    MessageT msg;
+
+    message_t__init(&msg);
+
+    // write codes and op_n to message
+    msg.opcode = MESSAGE_T__OPCODE__OP_VERIFY;
+    msg.c_type = MESSAGE_T__C_TYPE__CT_RESULT;
+    msg.op_n = op_n;
+
+    MessageT *answer = network_send_receive(rtree, &msg);
+
+    if (answer->opcode == MESSAGE_T__OPCODE__OP_VERIFY + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT && msg.size != NULL){
+        return msg.size;
+    }
+    
+    return -1;
 }
