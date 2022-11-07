@@ -176,8 +176,8 @@ int main(int argc, char *argv[]){
             int i = 0;
             printf("Values of Tree: {");
             while(datas[i] != NULL){
-                struct data_t* data = (struct data*)datas[i];
-                printf("%s", data->data);
+                struct data_t* data = (struct data_t*)datas[i];
+                printf("%s", (char *)data->data);
                 if (datas[i + 1] != NULL){
                     printf(", ");
                 }

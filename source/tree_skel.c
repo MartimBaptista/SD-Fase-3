@@ -27,6 +27,7 @@ int tree_skel_init(int N){
 */ 
 void * process_request (void *params){
     //TODO
+    return 0;
 }
 
 /* Liberta toda a memória e recursos alocados pela função tree_skel_init.
@@ -169,7 +170,7 @@ switch(op) {
         int i = 0;
         while(datas[i] != NULL){
             ProtobufCBinaryData data_temp;
-            data = (struct data*)datas[i];
+            data = (struct data_t*)datas[i];
             data_temp.len = data->datasize;
             data_temp.data = malloc(data->datasize);
             memcpy(data_temp.data, data->data, data->datasize);
