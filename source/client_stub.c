@@ -48,10 +48,6 @@ int rtree_disconnect(struct rtree_t *rtree) {
  * Devolve 0 (ok, em adição/substituição) ou -1 (problemas).
  */
 int rtree_put(struct rtree_t *rtree, struct entry_t *entry) {
-    
-    //TODO
-    //Recieve op_n
-
     MessageT msg;
     MessageT__Entry msg_entry;
 
@@ -81,11 +77,10 @@ int rtree_put(struct rtree_t *rtree, struct entry_t *entry) {
     free(msg_entry.key);
     free(msg_entry.data.data);
     
-    if (answer->opcode == MESSAGE_T__OPCODE__OP_PUT + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_NONE){
-        return 0;
+    if (answer->opcode == MESSAGE_T__OPCODE__OP_PUT + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT && answer->op_n != NULL){
+        return answer->op_n;
     }
 
-    
     return -1; 
 }
 
@@ -128,6 +123,7 @@ struct data_t *rtree_get(struct rtree_t *rtree, char *key) {
             return NULL; //TODO maybe return something else?
         }
     }
+
     return NULL; 
 }
 
@@ -136,10 +132,6 @@ struct data_t *rtree_get(struct rtree_t *rtree, char *key) {
  * Devolve: 0 (ok), -1 (key not found ou problemas).
  */
 int rtree_del(struct rtree_t *rtree, char *key) {
-
-    //TODO
-    //Recieve op_n
-
     MessageT msg;
     MessageT__Entry msg_entry;
 
@@ -163,8 +155,8 @@ int rtree_del(struct rtree_t *rtree, char *key) {
     MessageT *answer = network_send_receive(rtree,&msg);
     free(msg_entry.key);
 
-    if (answer->opcode == MESSAGE_T__OPCODE__OP_DEL + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_NONE){
-        return 0;
+    if (answer->opcode == MESSAGE_T__OPCODE__OP_DEL + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT && answer->op_n != NULL){
+        return answer->op_n;
     }
     
     return -1; 
@@ -295,8 +287,8 @@ int rtree_verify(struct rtree_t *rtree, int op_n){
 
     MessageT *answer = network_send_receive(rtree, &msg);
 
-    if (answer->opcode == MESSAGE_T__OPCODE__OP_VERIFY + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT && msg.size != NULL){
-        return msg.size;
+    if (answer->opcode == MESSAGE_T__OPCODE__OP_VERIFY + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT && answer->size != NULL){
+        return answer->size;
     }
     
     return -1;
