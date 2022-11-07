@@ -183,3 +183,10 @@ switch(op) {
 
     return -1;
 };
+
+/* Verifica se a operação identificada por op_n foi executada. 
+ */ 
+int verify(int op_n){
+    //TODO
+    return 0;
+}
