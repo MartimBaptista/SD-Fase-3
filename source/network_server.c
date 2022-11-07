@@ -194,5 +194,5 @@ int network_main_loop(int listening_socket){
  * network_server_init().
  */
 int network_server_close(){
-    return 0;
+    printf("\nClosing server.\n");
 }

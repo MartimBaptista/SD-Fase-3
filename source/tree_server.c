@@ -1,6 +1,12 @@
 #include "network_server.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+
+void closing_handler(int unused){
+    network_server_close();
+    exit(0);
+}
 
 int main(int argc, char *argv[]){
 
@@ -18,6 +24,8 @@ int main(int argc, char *argv[]){
         printf("Error Creating the tree\n");
         return -1;
     }
+
+    signal(SIGINT, closing_handler);
 
     network_main_loop(listening_socket_fd);
 
