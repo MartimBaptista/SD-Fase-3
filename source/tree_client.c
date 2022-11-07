@@ -154,6 +154,23 @@ int main(int argc, char *argv[]){
             free(key);
         }
 
+        //CASE VERIFY:
+        else if(strcmp(command, "verify") == 0){
+
+            //Checking for op_n
+            if(key_s == NULL){
+                printf("Missing op_n: \"verify <op_n>\"\n");
+                continue;
+            }
+
+            int op_n = atoi(key_s);
+            printf("Process with op number: %d has ", op_n);
+            if(rtree_verify(rtree, op_n))
+                printf("been processed.\n");
+            else
+                printf("not been processed.\n");
+        }
+
         //CASE SIZE:
         else if(strcmp(command, "size") == 0){
             //Getting tree size
@@ -210,7 +227,7 @@ int main(int argc, char *argv[]){
 
         //CASE COMMANDS:
         else if(strcmp(command, "commands") == 0){
-            printf("------//-----\n put <key> <data>\n get <key> \n del <key> \n size \n height \n getkeys \n getvalues \n quit \n------//-----\n");
+            printf("------//-----\n put <key> <data>\n get <key> \n del <key> \n verify \n size \n height \n getkeys \n getvalues \n quit \n------//-----\n");
         }
 
         //CASE DEFAULT
