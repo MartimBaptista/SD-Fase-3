@@ -154,13 +154,6 @@ int network_send(int client_socket, MessageT *msg){
  */
 int network_main_loop(int listening_socket){
 
-    //Aceitar uma conexão de um cliente
-    //while(1){
-        //call network_receive()
-        //call invoke()
-        //call network_send(return from invoke())
-    //}
-
     int connsockfd;
     struct sockaddr_in client;
     socklen_t size_client = sizeof(client);
@@ -179,7 +172,7 @@ int network_main_loop(int listening_socket){
         while (1) {
     		msg = network_receive(connsockfd);
 
-            if(msg->opcode == NULL){ //Disconnect
+            if(msg->opcode == MESSAGE_T__OPCODE__OP_DISCONNECT){ //Disconnect
                 break;
             }
 

@@ -33,8 +33,9 @@ struct rtree_t *rtree_connect(const char *address_port) {
 int rtree_disconnect(struct rtree_t *rtree) {
     MessageT msg;
 
-    //Create empty msg and sending (signaling a disconnect)
+    //Create msg and signaling a disconnect
     message_t__init(&msg);
+    msg.opcode = MESSAGE_T__OPCODE__OP_DISCONNECT;
     network_send_receive(rtree, &msg);
 
     int resp = network_close(rtree);

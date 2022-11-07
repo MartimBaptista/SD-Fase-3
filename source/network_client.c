@@ -96,7 +96,7 @@ MessageT *network_send_receive(struct rtree_t * rtree, MessageT *msg){
         return NULL;
     }
 
-    if(msg->opcode == NULL){ //Disconnect
+    if(msg->opcode == MESSAGE_T__OPCODE__OP_DISCONNECT){ //Disconnect
         return NULL;
     }
 
