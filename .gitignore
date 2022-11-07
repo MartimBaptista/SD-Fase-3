@@ -1,0 +1,8 @@
+#objects
+.o
+
+#binary
+binary/
+
+#vscode stuff
+.vscode
