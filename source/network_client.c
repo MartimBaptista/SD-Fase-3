@@ -100,6 +100,8 @@ MessageT *network_send_receive(struct rtree_t * rtree, MessageT *msg){
         return NULL;
     }
 
+    free(buf);
+
 
     //RECEIVING ANSWER
     size = 0; 
