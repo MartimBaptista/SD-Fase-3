@@ -142,6 +142,8 @@ int network_send(int client_socket, MessageT *msg){
     	close(client_socket);
     }
 
+    free(buf);
+
     return 0;
 }
 
@@ -224,5 +226,6 @@ int network_main_loop(int listening_socket){
  */
 int network_server_close(){
     printf("\nClosing server.\n");
+    //TODO?
     return 0;
 }
