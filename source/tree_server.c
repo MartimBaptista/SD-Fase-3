@@ -5,6 +5,7 @@
 
 void closing_handler(int unused){
     network_server_close();
+    tree_skel_destroy();
     exit(0);
 }
 
