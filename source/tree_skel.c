@@ -1,7 +1,6 @@
 #include "sdmessage.pb-c.h"
 #include "tree.h"
 #include "tree_skel.h"
-#include "request_t-private.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -10,18 +9,22 @@
 
 
 struct request_t { 
-    int op_n; //o número da operação 
-    int op; //a operação a executar. op=0 se for um delete, op=1 se for um put 
-    char* key; //a chave a remover ou adicionar 
+    int op_n;   //o número da operação 
+    int op;     //a operação a executar. op=0 se for um delete, op=1 se for um put 
+    char* key;  //a chave a remover ou adicionar 
     char* data; // os dados a adicionar em caso de put, ou NULL em caso de delete 
     //adicionar campo(s) necessário(s) para implementar fila do tipo produtor/consumidor 
 };
 
-
+struct op_proc_t {
+    int max_proc;
+    int *in_progress;
+};
 
 struct tree_t *tree;
 int last_assigned;
 struct request_t *queue_head;
+struct op_proc_t op_proc;
 
 pthread_t **threads;
 size_t threads_amount = 0;
@@ -37,6 +40,9 @@ int CLOSE_PROGRAM = 0;
  */
 int tree_skel_init(int N){
     tree = tree_create();
+    last_assigned = 1;
+    queue_head = malloc(sizeof(struct request_t) * N);
+    op_proc.in_progress = malloc(sizeof(int) * N);
 
     if(tree == NULL)
         return -1;
@@ -87,6 +93,8 @@ void tree_skel_destroy(){
     CLOSE_PROGRAM = 1;
 
     tree_destroy(tree);
+    free(queue_head);
+    free(op_proc.in_progress);
     
     for (size_t i = 0; i < threads_amount; i++)
     {   
