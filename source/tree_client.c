@@ -10,11 +10,22 @@
 
 
 #define BUFFERSIZE 500 //max input size
+struct rtree_t *rtree;
 
 void sigpipe_handler(int unused){
     printf("Connection to server broken!\n");
     printf("Closing program.\n");
     exit(-1);
+}
+
+void closing_handler(int unused){
+    //Disconnecting from server/tree
+    if(rtree_disconnect(rtree) < 0){
+        perror("Error on disconnect");
+        return -1;
+    }
+    printf("\nDisconnected from server\n");
+    exit(0);
 }
 
 int main(int argc, char *argv[]){
@@ -24,9 +35,6 @@ int main(int argc, char *argv[]){
         printf("Exemplo de uso: ./tree_client 127.0.0.1:12345\n");
         return -1;
     }
-
-    //Connecting to the server/tree
-    struct rtree_t *rtree;
     
     if((rtree = rtree_connect(argv[1])) == NULL){
         return(-1);
@@ -36,6 +44,7 @@ int main(int argc, char *argv[]){
 
 
     sigaction(SIGPIPE, &(struct sigaction){sigpipe_handler}, NULL);
+    signal(SIGINT, closing_handler);
 
     const char s[2] = " ";
     const char f[2] = "\0";
@@ -141,16 +150,8 @@ int main(int argc, char *argv[]){
             //Delliting it from the tree
             int op_n = rtree_del(rtree, key);
             if(op_n < 0){
-                //In case there is an entry with that key
-                if(strcmp(strerror(errno), "Success") == 0){
-                    printf("Key not found on tree.\n");
-                    continue;
-                }
-                //In case of error
-                else{
-                    perror("Error on del");
-                    continue;
-                }
+                perror("Error on del");
+                continue;
             }
             printf("Rquest to delete from tree received, assigned op_n: %d.\n", op_n);
             free(key);
