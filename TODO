@@ -1,1 +1,2 @@
-getkeys is returning something weird when tree is empty
+-getkeys is returning something weird when tree is empty.
+-Change get and del so they only send a key instead of an entry with empty data.
