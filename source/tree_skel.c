@@ -163,13 +163,13 @@ void tree_skel_destroy(){
 int invoke(MessageT *msg) {
     MessageT__Opcode op = msg->opcode;
 
-    char * key;
-    struct data_t* data;
+char * key;
+struct data_t* data;
+struct request_t* new_request;
 
-
-    switch(op) {
-        case MESSAGE_T__OPCODE__OP_SIZE: ;
-            printf("Requested: size\n");
+switch(op) {
+    case MESSAGE_T__OPCODE__OP_SIZE: ;
+        printf("Requested: size\n");
 
             msg->opcode = MESSAGE_T__OPCODE__OP_SIZE + 1;
             msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
@@ -192,7 +192,7 @@ int invoke(MessageT *msg) {
             printf("Requested: del %s\n", msg->entry->key);
 
         //creating request
-        struct request_t* new_request = malloc(sizeof(struct request_t));
+        new_request = malloc(sizeof(struct request_t));
         //inserting key
         new_request->key = malloc(strlen(msg->entry->key) + 1);
         strcpy(new_request->key, msg->entry->key);
@@ -237,7 +237,7 @@ int invoke(MessageT *msg) {
             printf("Requested: put %s %s\n", msg->entry->key, (char*)msg->entry->data.data);
 
         //creating request
-        struct request_t* new_request = malloc(sizeof(struct request_t));
+        new_request = malloc(sizeof(struct request_t));
         //inserting key
         new_request->key = malloc(strlen(msg->entry->key) + 1);
         strcpy(new_request->key, msg->entry->key);
@@ -357,7 +357,7 @@ int verify(int op_n){
         ret = 1;
     else        //TODO: perguntar ao stor se isto é necessario ou sequer feito assim
         ret = 1;
-        for (size_t i = 0; i < sizof(op_proc.in_progress) / sizeof(int); i++){
+        for (size_t i = 0; i < sizeof(op_proc.in_progress) / sizeof(int); i++){
             if(op_n == op_proc.in_progress[i]){
                 ret = 0;
                 break;
