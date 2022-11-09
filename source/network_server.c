@@ -172,8 +172,8 @@ int network_main_loop(int listening_socket){
 
     int nfds = 1; //numero de file descriptors
 
+    printf("Server started, waiting for client...\n");
     while(poll(desc_set, nfds, timeout) >= 0){
-        /* printf("Server listening...\n"); */
         if ((desc_set[0].revents & POLLIN) && (nfds < nfdesc)) {
             if((desc_set[nfds].fd = accept(desc_set[0].fd,(struct sockaddr *) &client, &size_client)) > 0){
                 printf("Client number: %d connected\n", nfds);
