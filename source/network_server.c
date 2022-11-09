@@ -1,4 +1,5 @@
 #include "inet.h"
+#include <poll.h>
 #include <errno.h>
 #include <stdlib.h>
 #include "sdmessage.pb-c.h"
@@ -142,8 +143,6 @@ int network_send(int client_socket, MessageT *msg){
     	close(client_socket);
     }
 
-    free(buf);
-
     return 0;
 }
 
@@ -156,40 +155,65 @@ int network_send(int client_socket, MessageT *msg){
  */
 int network_main_loop(int listening_socket){
 
-    int connsockfd;
+    int nfdesc = 5;
+    int timeout = 60;
+
     struct sockaddr_in client;
     socklen_t size_client = sizeof(client);
-    MessageT *msg;
+    
 
-    while(1){
-        printf("Server listening...\n");
-        if ((connsockfd = accept(listening_socket,(struct sockaddr *) &client, &size_client)) < 0) {
-            perror("Erro ao aceitar o cliente");
-        	close(connsockfd);
-            return(-1);
+    struct pollfd desc_set[nfdesc]; // numero maximo de cliente concorrentes
+
+    for(int i = 0; i < nfdesc; i++)
+        desc_set[i].fd = -1;
+
+    desc_set[0].fd = listening_socket; //adiciona listening_socket a desc_set
+    desc_set[0].events = POLLIN; 
+
+    int nfds = 1; //numero de file descriptors
+
+    while(poll(desc_set, nfds, timeout) >= 0){
+        /* printf("Server listening...\n"); */
+        if ((desc_set[0].revents & POLLIN) && (nfds < nfdesc)) {
+            if((desc_set[nfds].fd = accept(desc_set[0].fd,(struct sockaddr *) &client, &size_client)) > 0){
+                printf("Client number: %d connected\n", nfds);
+                desc_set[nfds].events = POLLIN; //wait for data
+                nfds++;
+            }
         }
 
-        printf("Connection established in port: %d\n", connsockfd);
+        for(int i = 1; i < nfds; i++){
+            if(desc_set[i].revents & POLLIN) {
+                MessageT *msg  = network_receive(desc_set[i].fd);
 
-        while (1) {
-    		msg = network_receive(connsockfd);
+                if(msg->opcode == MESSAGE_T__OPCODE__OP_DISCONNECT) {
+                    printf("Client number: %d disconnected\n",i);
+                    close(desc_set[i].fd);
+                    desc_set[i].fd = -1;
+                } else {
+                    if(invoke(msg) < 0) {
+                        printf("Error on invoke\n");
+                        msg->opcode = MESSAGE_T__OPCODE__OP_ERROR;
+                        msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
+                    }
 
-            if(msg->opcode == MESSAGE_T__OPCODE__OP_DISCONNECT){ //Disconnect
-                break;
+                    if(network_send(desc_set[i].fd, msg) == -1) {
+                        close(desc_set[i].fd);
+                        return -1;
+                    }
+                }
             }
-
-            if(invoke(msg) < 0){
-                printf("Error on invoke\n");
-                msg->opcode = MESSAGE_T__OPCODE__OP_ERROR;
-                msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
-            }
-
-            network_send(connsockfd, msg);
         }
 
-        printf("Disconecting from port: %d\n", connsockfd);
-        close(connsockfd);
+        for(int i = 1 ; i < nfds ;i++){  //allows new connections when clients disconnect
+            if(desc_set[i].fd == -1){
+                desc_set[i].fd = desc_set[nfds].fd;
+                nfds --;
+            }
+        }
     }
+    close(listening_socket);
+    return 0;
 
     /* TODO
      *                              --Esboço do algoritmo a ser implementado--
@@ -226,6 +250,5 @@ int network_main_loop(int listening_socket){
  */
 int network_server_close(){
     printf("\nClosing server.\n");
-    //TODO?
     return 0;
 }
