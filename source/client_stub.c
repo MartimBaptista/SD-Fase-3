@@ -120,7 +120,7 @@ struct data_t *rtree_get(struct rtree_t *rtree, char *key) {
         }
         //In case there isn't an entry with that key
         else if(answer->c_type == MESSAGE_T__C_TYPE__CT_NONE){
-            return NULL; //TODO maybe return something else?
+            return NULL; //TODO: maybe return something else?
         }
     }
 

@@ -33,7 +33,7 @@ int network_server_init(short port){
     // Preenche estrutura server com endereço(s) para associar (bind) à socket 
     server.sin_family = AF_INET;
     server.sin_port = htons(port); // Porta TCP
-    server.sin_addr.s_addr = htonl(INADDR_ANY); // Todos os endereços na máquina
+    server.sin_addr.s_addr = htonl(INADDR_ANY); // TODO:vos endereços na máquina
 
     // Faz bind
     if (bind(listening_socket, (struct sockaddr *) &server, sizeof(server)) < 0){
