@@ -351,18 +351,25 @@ switch(op) {
 /* Verifica se a operação identificada por op_n foi executada. 
  */ 
 int verify(int op_n){
-    int ret = 0;
+    int done = 0;
+    int done_not_on_max = 0;
+    if(op_n <= 0)
+        return -1;
     pthread_mutex_lock(op_proc_lock);
     if(op_n <= op_proc.max_proc)
-        ret = 1;
-    else        //TODO: perguntar ao stor se isto é necessario ou sequer feito assim
-        ret = 1;
+        done = 1;
+    else{        //TODO: perguntar ao stor se isto é necessario ou sequer feito assim
         for (size_t i = 0; i < sizeof(op_proc.in_progress) / sizeof(int); i++){
-            if(op_n == op_proc.in_progress[i]){
-                ret = 0;
-                break;
+            if(op_proc.in_progress[i] != 0){
+                if(op_n > op_proc.in_progress[i])
+                    done_not_on_max = 1;
+                else if(op_n == op_proc.in_progress[i]){
+                    done_not_on_max = 0;
+                    break;
+                }
             }
         }
+    }
     pthread_mutex_unlock(op_proc_lock);
-    return ret;
+    return (done || done_not_on_max);
 }
