@@ -5,10 +5,11 @@
 #include <stdio.h>
 
 struct request_t { 
-    int op_n;   //o número da operação 
-    int op;     //a operação a executar. op=0 se for um delete, op=1 se for um put 
-    char* key;  //a chave a remover ou adicionar 
-    char* data; // os dados a adicionar em caso de put, ou NULL em caso de delete 
+    int op_n;               //o número da operação 
+    int op;                 //a operação a executar. op=0 se for um delete, op=1 se for um put 
+    char* key;              //a chave a remover ou adicionar 
+    char* data;             //os dados a adicionar em caso de put, ou NULL em caso de delete 
+    struct request_t* next; //o proximo request (linked list)
     //adicionar campo(s) necessário(s) para implementar fila do tipo produtor/consumidor 
 };
 
@@ -18,9 +19,15 @@ struct op_proc_t {
 };
 
 struct tree_t *tree;
+
 int last_assigned;
 struct request_t *queue_head;
 struct op_proc_t op_proc;
+
+pthread_mutex_t queue_lock;
+pthread_mutex_t tree_lock;
+pthread_mutex_t op_proc_lock;
+pthread_cond_t queue_not_empty;
 
 
 /* Inicia o skeleton da árvore. 
@@ -31,31 +38,76 @@ struct op_proc_t op_proc;
  * Retorna 0 (OK) ou -1 (erro, por exemplo OUT OF MEMORY) 
  */
 int tree_skel_init(int N){
+    //Creating tree
     tree = tree_create();
+
+    //Reserving in_progress array and setting last_assigned and max_proc
     last_assigned = 1;
-    queue_head = malloc(sizeof(struct request_t) * N);
+    op_proc.max_proc = 0;
     op_proc.in_progress = malloc(sizeof(int) * N);
 
-    //TODO crete threads
+    //Initialising locks
+    pthread_mutex_init(queue_lock, NULL);
+    pthread_mutex_init(tree_lock, NULL);
+    pthread_mutex_init(op_proc_lock, NULL);
+    pthread_cond_init(&queue_not_empty, NULL);
+
+    //TODO: crete threads
 
     if(tree == NULL)
         return -1;
     return 0;
 }
 
+void queue_add_task(struct request_t *request){
+    pthread_mutex_lock(&queue_lock);
+    if (queue_head == NULL){ /* Adiciona na cabeça da fila */
+        queue_head = request;
+        request->next = NULL;
+    }
+    else{ /* Adiciona no fim da fila */
+        struct request_t *tptr = queue_head;
+        while (tptr->next != NULL)
+            tptr = tptr->next;
+        tptr->next = request;
+        request->next = NULL;
+    }
+    pthread_cond_signal(&queue_not_empty); /* Avisa um bloqueado nessa condição */
+    pthread_mutex_unlock(&queue_lock);
+}
+
+struct request_t *queue_get_task(){
+    pthread_mutex_lock(&queue_lock);
+    while (queue_head == NULL)
+        pthread_cond_wait(&queue_not_empty, &queue_lock); /* Espera haver algo */
+    struct request_t *task = queue_head;
+    queue_head = task->next;
+    pthread_mutex_unlock(&queue_lock);
+    return task;
+}
+
 /* Função da thread secundária que vai processar pedidos de escrita. 
 */ 
 void * process_request (void *params){
-    //TODO
+    //TODO: use pthread_cond_broadcast when locked after trying to increassing proc_max when porc_max is not op_n - 1 (waiting for previous)
+
     return 0;
 }
 
 /* Liberta toda a memória e recursos alocados pela função tree_skel_init.
  */
 void tree_skel_destroy(){
+    //destroying tree
     tree_destroy(tree);
-    free(queue_head);
+
+    //freeing in_progress array
     free(op_proc.in_progress);
+
+    //destroying locks
+    pthread_mutex_destroy(queue_lock);
+    pthread_mutex_destroy(tree_lock);
+    pthread_mutex_destroy(op_proc_lock);
+    pthread_cond_destroy(queue_not_empty);
 }
 
 /* Executa uma operação na árvore (indicada pelo opcode contido em msg)
@@ -69,7 +121,6 @@ MessageT__Opcode op = msg->opcode;
 char * key;
 struct data_t* data;
 
-
 switch(op) {
     case MESSAGE_T__OPCODE__OP_SIZE: ;
         printf("Requested: size\n");
@@ -79,8 +130,6 @@ switch(op) {
         msg->result = tree_size(tree);
         return 0;
 
-        break;
-
     case MESSAGE_T__OPCODE__OP_HEIGHT: ;
         printf("Requested: height\n");
 
@@ -88,27 +137,28 @@ switch(op) {
         msg->opcode = MESSAGE_T__OPCODE__OP_HEIGHT + 1;
         msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
         return 0;
-        break;
 
     case MESSAGE_T__OPCODE__OP_DEL: ;
-
-        //TODO
-
         printf("Requested: del %s\n", msg->entry->key);
 
-        //executa tree_del
-        int del = tree_del(tree, msg->entry->key);
+        //creating request
+        struct request_t* new_request = malloc(sizeof(struct request_t));
+        //inserting key
+        new_request->key = malloc(strlen(msg->entry->key) + 1);
+        strcpy(new_request->key, msg->entry->key);
+        //setting op and op_n
+        new_request->op = 0;
+        new_request->op_n = last_assigned;
+        last_assigned++;
+        
+        queue_add_task(new_request);
 
-        //caso de erro em tree_del
-        if(del == -1){
-            printf("Error on Delete\n");
-            return -1;
-        }
-
+        //creating answer msg
         msg->opcode = MESSAGE_T__OPCODE__OP_DEL + 1;
-        msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
+        msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
+        msg->result = new_request->op_n;
+
         return 0;
-        break;
 
     case MESSAGE_T__OPCODE__OP_GET: ;
         printf("Requested: get %s\n", msg->entry->key);
@@ -129,11 +179,10 @@ switch(op) {
         msg->entry->data.data = data->data;
         msg->entry->data.len = data->datasize;
         return 0;
-        break;
 
     case MESSAGE_T__OPCODE__OP_PUT: ;
 
-        //TODO
+        //TODO:
 
         printf("Requested: put %s %s\n", msg->entry->key, (char*)msg->entry->data.data);
 
@@ -153,7 +202,6 @@ switch(op) {
         msg->opcode = MESSAGE_T__OPCODE__OP_PUT + 1;
         msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
         return 0;
-        break;
 
     case MESSAGE_T__OPCODE__OP_GETKEYS: ;
         printf("Requested: getkeys\n");
@@ -173,7 +221,6 @@ switch(op) {
         msg->keys = keys;
 
         return 0;
-        break;
 
     case MESSAGE_T__OPCODE__OP_GETVALUES: ;
         printf("Requested: getvalues\n");
@@ -205,7 +252,6 @@ switch(op) {
         msg->c_type = MESSAGE_T__C_TYPE__CT_VALUES;
 
         return 0;
-        break;
 
     case MESSAGE_T__OPCODE__OP_ERROR: ;
         printf("Received message signaling error.\n");
@@ -221,6 +267,6 @@ switch(op) {
 /* Verifica se a operação identificada por op_n foi executada. 
  */ 
 int verify(int op_n){
-    //TODO
+    //TODO:
     return 0;
 }
