@@ -174,7 +174,7 @@ int main(int argc, char *argv[]){
             else if(res == 0)
                 printf("has not been processed.\n");
             else{
-                printf("doesnt exist, or an error ocorred.\n");
+                printf("is not vallid.\n");
             }
         }
 
