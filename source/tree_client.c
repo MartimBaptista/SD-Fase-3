@@ -22,7 +22,7 @@ void closing_handler(int unused){
     //Disconnecting from server/tree
     if(rtree_disconnect(rtree) < 0){
         perror("Error on disconnect");
-        return -1;
+        exit(-1);
     }
     printf("\nDisconnected from server\n");
     exit(0);

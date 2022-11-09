@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <pthread.h>
 
 struct request_t { 
     int op_n;               //o número da operação 
@@ -44,12 +45,14 @@ int tree_skel_init(int N){
     //Reserving in_progress array and setting last_assigned and max_proc
     last_assigned = 1;
     op_proc.max_proc = 0;
-    op_proc.in_progress = malloc(sizeof(int) * N);
+    op_proc.in_progress = malloc(sizeof(int) * (N + 1));
+    op_proc.in_progress[N] = -1; //-1 used as terminator
+    
 
     //Initialising locks
-    pthread_mutex_init(queue_lock, NULL);
-    pthread_mutex_init(tree_lock, NULL);
-    pthread_mutex_init(op_proc_lock, NULL);
+    pthread_mutex_init(&queue_lock, NULL);
+    pthread_mutex_init(&tree_lock, NULL);
+    pthread_mutex_init(&op_proc_lock, NULL);
     pthread_cond_init(&queue_not_empty, NULL);
 
     //TODO: crete threads
@@ -119,12 +122,38 @@ void tree_skel_destroy(){
     free(op_proc.in_progress);
 
     //destroying locks
-    pthread_mutex_destroy(queue_lock);
-    pthread_mutex_destroy(tree_lock);
-    pthread_mutex_destroy(op_proc_lock);
-    pthread_cond_destroy(queue_not_empty);
+    pthread_mutex_destroy(&queue_lock);
+    pthread_mutex_destroy(&tree_lock);
+    pthread_mutex_destroy(&op_proc_lock);
+    pthread_cond_destroy(&queue_not_empty);
 
     //TODO: destroys threads???
+}
+
+/* Verifica se a operação identificada por op_n foi executada. 
+ */ 
+int verify(int op_n){
+    int done = 0;
+    int done_not_on_max = 0;
+    if(op_n <= 0)
+        return -1;
+    pthread_mutex_lock(&op_proc_lock);
+    if(op_n <= op_proc.max_proc)
+        done = 1;
+    else{        //TODO: perguntar ao stor se isto é necessario ou sequer feito assim
+        for (size_t i = 0; op_proc.in_progress[i] != -1; i++){
+            if(op_proc.in_progress[i] != 0){
+                if(op_n > op_proc.in_progress[i])
+                    done_not_on_max = 1;
+                else if(op_n == op_proc.in_progress[i]){
+                    done_not_on_max = 0;
+                    break;
+                }
+            }
+        }
+    }
+    pthread_mutex_unlock(&op_proc_lock);
+    return (done || done_not_on_max);
 }
 
 /* Executa uma operação na árvore (indicada pelo opcode contido em msg)
@@ -312,29 +341,3 @@ switch(op) {
 
     return -1;
 };
-
-/* Verifica se a operação identificada por op_n foi executada. 
- */ 
-int verify(int op_n){
-    int done = 0;
-    int done_not_on_max = 0;
-    if(op_n <= 0)
-        return -1;
-    pthread_mutex_lock(op_proc_lock);
-    if(op_n <= op_proc.max_proc)
-        done = 1;
-    else{        //TODO: perguntar ao stor se isto é necessario ou sequer feito assim
-        for (size_t i = 0; i < sizeof(op_proc.in_progress) / sizeof(int); i++){
-            if(op_proc.in_progress[i] != 0){
-                if(op_n > op_proc.in_progress[i])
-                    done_not_on_max = 1;
-                else if(op_n == op_proc.in_progress[i]){
-                    done_not_on_max = 0;
-                    break;
-                }
-            }
-        }
-    }
-    pthread_mutex_unlock(op_proc_lock);
-    return (done || done_not_on_max);
-}
