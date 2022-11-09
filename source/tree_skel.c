@@ -89,8 +89,23 @@ struct request_t *queue_get_task(){
 /* Função da thread secundária que vai processar pedidos de escrita. 
 */ 
 void * process_request (void *params){
-    //TODO: use pthread_cond_broadcast when locked after trying to increassing proc_max when porc_max is not op_n - 1 (waiting for previous)
+    while(1){
 
+        //TODO: perguntar ao stor se é assim que isto deve ser feito
+        //fetch a request from queue_get_task
+            //lock op_proc
+            //put op_n in op_prock.in_progress
+            //unlock op_proc
+        //process request
+        //free() request elements
+
+        //lock op_proc
+        //while(op_max != op_n){
+            //update op_proc.max_proc unless max is not the previous (max + 1 != op_n) in which case pthread_cond_wait(op_proc_not_new_max ,op_proc_lock) to let the previous update max first.
+        //}
+        //pthread_cond_broadcast(op_proc_not_new_max)
+        //unlock op_proc
+    }
     return 0;
 }
 
