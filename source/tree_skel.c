@@ -8,7 +8,7 @@ struct request_t {
     int op_n;               //o número da operação 
     int op;                 //a operação a executar. op=0 se for um delete, op=1 se for um put 
     char* key;              //a chave a remover ou adicionar 
-    char* data;             //os dados a adicionar em caso de put, ou NULL em caso de delete 
+    struct data_t* data;    //os dados a adicionar em caso de put, ou NULL em caso de delete 
     struct request_t* next; //o proximo request (linked list)
     //adicionar campo(s) necessário(s) para implementar fila do tipo produtor/consumidor 
 };
@@ -108,6 +108,8 @@ void tree_skel_destroy(){
     pthread_mutex_destroy(tree_lock);
     pthread_mutex_destroy(op_proc_lock);
     pthread_cond_destroy(queue_not_empty);
+
+    //TODO: destroys threads???
 }
 
 /* Executa uma operação na árvore (indicada pelo opcode contido em msg)
@@ -156,7 +158,7 @@ switch(op) {
         //creating answer msg
         msg->opcode = MESSAGE_T__OPCODE__OP_DEL + 1;
         msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
-        msg->result = new_request->op_n;
+        msg->op_n = new_request->op_n;
 
         return 0;
 
@@ -181,26 +183,57 @@ switch(op) {
         return 0;
 
     case MESSAGE_T__OPCODE__OP_PUT: ;
-
-        //TODO:
-
         printf("Requested: put %s %s\n", msg->entry->key, (char*)msg->entry->data.data);
 
-        //cria data para tree_put
-        key = malloc(strlen(msg->entry->key) + 1);
-        strcpy(key, msg->entry->key);
-        void * buf = malloc(msg->entry->data.len);
-        memcpy(buf, msg->entry->data.data, msg->entry->data.len);
-        data = data_create2(msg->entry->data.len, buf);
+        //creating request
+        struct request_t* new_request = malloc(sizeof(struct request_t));
+        //inserting key
+        new_request->key = malloc(strlen(msg->entry->key) + 1);
+        strcpy(new_request->key, msg->entry->key);
+        //inserting data
+        new_request->data = data_create(msg->entry->data.len);
+        memcpy(new_request->data->data, msg->entry->data.data, new_request->data->datasize);
+        //setting op and op_n
+        new_request->op = 1;
+        new_request->op_n = last_assigned;
+        last_assigned++;
+        
+        queue_add_task(new_request);
 
-        //caso de erro em tree_put
-        if(tree_put(tree,key,data) == -1 ){
-            printf("Error on Put\n");
-            return -1;
-        }
-
+        //creating answer msg
         msg->opcode = MESSAGE_T__OPCODE__OP_PUT + 1;
-        msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
+        msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
+        msg->op_n = new_request->op_n;
+
+        return 0;
+
+        //TDOO: Remove old put (leave for reference)
+
+        // //cria data para tree_put
+        // key = malloc(strlen(msg->entry->key) + 1);
+        // strcpy(key, msg->entry->key);
+        // void * buf = malloc(msg->entry->data.len);
+        // memcpy(buf, msg->entry->data.data, msg->entry->data.len);
+        // data = data_create2(msg->entry->data.len, buf);
+
+        // //caso de erro em tree_put
+        // if(tree_put(tree,key,data) == -1 ){
+        //     printf("Error on Put\n");
+        //     return -1;
+        // }
+
+        // msg->opcode = MESSAGE_T__OPCODE__OP_PUT + 1;
+        // msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
+        // return 0;
+
+    case MESSAGE_T__OPCODE__OP_VERIFY: ;
+        printf("Requested: verify %d\n", msg->op_n);
+
+        //creating answer msg
+        msg->opcode = MESSAGE_T__OPCODE__OP_VERIFY + 1;
+        msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
+        msg->result = verify(msg->op_n);
+
         return 0;
 
     case MESSAGE_T__OPCODE__OP_GETKEYS: ;
@@ -267,6 +300,18 @@ switch(op) {
 /* Verifica se a operação identificada por op_n foi executada. 
  */ 
 int verify(int op_n){
-    //TODO:
-    return 0;
+    int ret = 0;
+    pthread_mutex_lock(op_proc_lock);
+    if(op_n <= op_proc.max_proc)
+        ret = 1;
+    else        //TODO: perguntar ao stor se isto é necessario ou sequer feito assim
+        ret = 1;
+        for (size_t i = 0; i < sizof(op_proc.in_progress) / sizeof(int); i++){
+            if(op_n == op_proc.in_progress[i]){
+                ret = 0;
+                break;
+            }
+        }
+    pthread_mutex_unlock(op_proc_lock);
+    return ret;
 }
