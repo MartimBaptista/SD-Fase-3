@@ -146,7 +146,6 @@ void tree_skel_destroy(){
     {
         pthread_join(*threads[i], NULL);
         free(threads[i]);
-        puts("Freed the Threads");
     }
 
     free(threads);
