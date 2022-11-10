@@ -49,6 +49,10 @@ int tree_skel_init(int N){
     //Creating tree
     tree = tree_create();
 
+    printf("Vou iniciar as %d threads\n", N);
+
+    threads_amount = N;
+
     //Reserving in_progress array and setting last_assigned and max_proc
     last_assigned = 1;
     op_proc.max_proc = 0;
@@ -61,6 +65,20 @@ int tree_skel_init(int N){
     pthread_mutex_init(&tree_lock, NULL);
     pthread_mutex_init(&op_proc_lock, NULL);
     pthread_cond_init(&queue_not_empty, NULL);
+
+    //TODO: create threads
+
+    if (N < 1)
+    {
+        return -1;
+    }
+    
+
+    for (int i = 0; i < threads_amount; i++) {
+        threads[i] = malloc(sizeof(pthread_t));
+        pthread_create(threads[i], NULL, process_request, i + 1);    
+        pthread_detach(threads[i]);
+    }
 
     if(tree == NULL)
         return -1;
@@ -139,6 +157,15 @@ void tree_skel_destroy(){
 
     //destroying tree
     tree_destroy(tree);
+    
+    // size_t thread_amount = sizeof(threads) / sizeof(threads[0]);
+    for (size_t i = 0; i < threads_amount && threads[i] != NULL; i++)
+    {
+        // puts("Waiting thread");
+        // void **ret;
+        // pthread_join(threads[i], ret);
+    }
+
 
     //freeing in_progress array
     free(op_proc.in_progress);
@@ -189,9 +216,9 @@ char * key;
 struct data_t* data;
 struct request_t* new_request;
 
-switch(op) {
-    case MESSAGE_T__OPCODE__OP_SIZE: ;
-        printf("Requested: size\n");
+    switch(op) {
+        case MESSAGE_T__OPCODE__OP_SIZE: ;
+            printf("Requested: size\n");
 
             msg->opcode = MESSAGE_T__OPCODE__OP_SIZE + 1;
             msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
@@ -202,10 +229,11 @@ switch(op) {
         case MESSAGE_T__OPCODE__OP_HEIGHT: ;
             printf("Requested: height\n");
 
-        msg->result = tree_height(tree);
-        msg->opcode = MESSAGE_T__OPCODE__OP_HEIGHT + 1;
-        msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
-        return 0;
+            msg->result = tree_height(tree);
+            msg->opcode = MESSAGE_T__OPCODE__OP_HEIGHT + 1;
+            msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
+            return 0;
+            break;
 
         case MESSAGE_T__OPCODE__OP_DEL: ;
 
@@ -333,12 +361,12 @@ switch(op) {
 
             void** datas = tree_get_values(tree);
 
-            //caso arvore vazia
-            if(datas == NULL){
-                msg->opcode = MESSAGE_T__OPCODE__OP_BAD;
-                msg->c_type = MESSAGE_T__C_TYPE__CT_BAD;
-                return 0;
-            }
+        //caso arvore vazia
+        if(datas == NULL){
+            msg->opcode = MESSAGE_T__OPCODE__OP_BAD;
+            msg->c_type = MESSAGE_T__C_TYPE__CT_BAD;
+            return 0;
+        }
 
             msg->n_values = tree_size(tree);
             msg->values = malloc(tree_size(tree) * sizeof(ProtobufCBinaryData*));
