@@ -73,7 +73,7 @@ int tree_skel_init(int N){
         return -1;
     }
 
-    printf("Vou iniciar as %ld threads\n", threads_amount);
+    // printf("Vou iniciar as %ld threads\n", threads_amount);
 
     threads = malloc(sizeof(pthread_t *) * threads_amount);    
 
