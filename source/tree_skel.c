@@ -26,6 +26,7 @@ struct tree_t *tree;
 
 int last_assigned;
 struct request_t *queue_head;
+
 struct op_proc_t op_proc;
 
 pthread_mutex_t queue_lock;
@@ -49,7 +50,8 @@ int tree_skel_init(int N){
     //Creating tree
     tree = tree_create();
 
-    printf("Vou iniciar as %d threads\n", N);
+    if(tree == NULL)
+        return -1;
 
     threads_amount = N;
 
@@ -58,32 +60,13 @@ int tree_skel_init(int N){
     op_proc.max_proc = 0;
     op_proc.in_progress = calloc((N + 1), sizeof(int));
     op_proc.in_progress[N] = -1; //-1 used as terminator
-    
+
 
     //Initialising locks
     pthread_mutex_init(&queue_lock, NULL);
     pthread_mutex_init(&tree_lock, NULL);
     pthread_mutex_init(&op_proc_lock, NULL);
     pthread_cond_init(&queue_not_empty, NULL);
-
-    //TODO: create threads
-
-    if (N < 1)
-    {
-        return -1;
-    }
-    
-
-    for (int i = 0; i < threads_amount; i++) {
-        threads[i] = malloc(sizeof(pthread_t));
-        pthread_create(threads[i], NULL, process_request, i + 1);    
-        pthread_detach(threads[i]);
-    }
-
-    if(tree == NULL)
-        return -1;
-
-    threads_amount = N;
 
     if (threads_amount < 1)
     {
@@ -158,14 +141,13 @@ void tree_skel_destroy(){
     //destroying tree
     tree_destroy(tree);
     
-    // size_t thread_amount = sizeof(threads) / sizeof(threads[0]);
-    for (size_t i = 0; i < threads_amount && threads[i] != NULL; i++)
-    {
-        // puts("Waiting thread");
-        // void **ret;
-        // pthread_join(threads[i], ret);
+    for (size_t i = 0; i < threads_amount; i++)
+    {   
+        pthread_join(*threads[i], NULL);
+        free(threads[i]);
     }
 
+    free(threads);
 
     //freeing in_progress array
     free(op_proc.in_progress);
