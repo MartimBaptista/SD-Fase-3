@@ -143,8 +143,7 @@ void tree_skel_destroy(){
     tree_destroy(tree);
     
     for (size_t i = 0; i < threads_amount; i++)
-    {   
-        puts("Start");
+    {
         pthread_join(*threads[i], NULL);
         free(threads[i]);
         puts("Freed the Threads");
@@ -160,8 +159,6 @@ void tree_skel_destroy(){
     pthread_mutex_destroy(&tree_lock);
     pthread_mutex_destroy(&op_proc_lock);
     pthread_cond_destroy(&queue_not_empty);
-    
-
 
 }
 
