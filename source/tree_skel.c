@@ -96,13 +96,16 @@ void * process_request (void *params){
 
         //TODO: perguntar ao stor se é assim que isto deve ser feito
         //fetch a request from queue_get_task
-            //lock op_proc
-            //put op_n in op_prock.in_progress
-            //unlock op_proc
-        //process request
+
+        //lock op_proc
+        //put op_n in op_prock.in_progress
+        //unlock op_proc
+
+        //process request (put or del)
         //free() request elements
 
         //lock op_proc
+        //take out op_n in op_prock.in_progress leave a 0
         //update op_proc.max_proc unless op_n is smaller (aka, not the new max)
         //unlock op_proc
     }
