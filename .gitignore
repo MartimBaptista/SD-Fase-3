@@ -6,3 +6,5 @@ binary/
 
 #vscode stuff
 *.vscode
+
+tests

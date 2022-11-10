@@ -189,7 +189,7 @@ int network_main_loop(int listening_socket){
         close(connsockfd);
     }
 
-    /* TODO
+    /* TODO - multiplexagem de clientes
      *                              --Esboço do algoritmo a ser implementado--
      *
      * adiciona listening_socket a desc_set.                            //desc_set corresponde a um conjunto de file descriptors
