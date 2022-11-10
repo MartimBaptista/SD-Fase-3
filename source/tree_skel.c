@@ -45,7 +45,7 @@ int tree_skel_init(int N){
     //Reserving in_progress array and setting last_assigned and max_proc
     last_assigned = 1;
     op_proc.max_proc = 0;
-    op_proc.in_progress = malloc(sizeof(int) * (N + 1));
+    op_proc.in_progress = calloc((N + 1), sizeof(int));
     op_proc.in_progress[N] = -1; //-1 used as terminator
     
 
