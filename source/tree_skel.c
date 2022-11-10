@@ -73,7 +73,7 @@ int tree_skel_init(int N){
         return -1;
     }
 
-    // printf("Vou iniciar as %ld threads\n", threads_amount);
+    printf("Vou iniciar as %ld threads\n", threads_amount);
 
     threads = malloc(sizeof(pthread_t *) * threads_amount);    
 
@@ -138,13 +138,16 @@ void * process_request (void *params){
 void tree_skel_destroy(){
     CLOSE_PROGRAM = 1;
 
+
     //destroying tree
     tree_destroy(tree);
     
     for (size_t i = 0; i < threads_amount; i++)
     {   
+        puts("Start");
         pthread_join(*threads[i], NULL);
         free(threads[i]);
+        puts("Freed the Threads");
     }
 
     free(threads);
@@ -158,13 +161,8 @@ void tree_skel_destroy(){
     pthread_mutex_destroy(&op_proc_lock);
     pthread_cond_destroy(&queue_not_empty);
     
-    for (size_t i = 0; i < threads_amount; i++)
-    {   
-        pthread_join(*threads[i], NULL);
-        free(threads[i]);
-    }
 
-    free(threads);
+
 }
 
 /* Verifica se a operação identificada por op_n foi executada. 
@@ -194,9 +192,9 @@ int verify(int op_n){
 int invoke(MessageT *msg) {
     MessageT__Opcode op = msg->opcode;
 
-char * key;
-struct data_t* data;
-struct request_t* new_request;
+    char * key;
+    struct data_t* data;
+    struct request_t* new_request;
 
     switch(op) {
         case MESSAGE_T__OPCODE__OP_SIZE: ;
