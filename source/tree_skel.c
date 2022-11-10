@@ -130,27 +130,21 @@ void tree_skel_destroy(){
 /* Verifica se a operação identificada por op_n foi executada. 
  */ 
 int verify(int op_n){
-    int done = 0;
-    int done_not_on_max = 0;
+    int ret = 0;
     if(op_n <= 0)
         return -1;
     pthread_mutex_lock(&op_proc_lock);
-    if(op_n <= op_proc.max_proc)
-        done = 1;
-    else{        //TODO: perguntar ao stor se isto é necessario ou sequer feito assim
+    if(op_n <= op_proc.max_proc){
+        ret = 1;
         for (size_t i = 0; op_proc.in_progress[i] != -1; i++){
-            if(op_proc.in_progress[i] != 0){
-                if(op_n > op_proc.in_progress[i])
-                    done_not_on_max = 1;
-                else if(op_n == op_proc.in_progress[i]){
-                    done_not_on_max = 0;
-                    break;
-                }
+            if(op_n == op_proc.in_progress[i]){
+                ret = 0;
+                break;
             }
         }
     }
     pthread_mutex_unlock(&op_proc_lock);
-    return (done || done_not_on_max);
+    return (ret);
 }
 
 /* Executa uma operação na árvore (indicada pelo opcode contido em msg)
