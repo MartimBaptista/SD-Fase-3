@@ -22,7 +22,8 @@ int main(int argc, char *argv[]){
     int listening_socket_fd = network_server_init(listening_socket_port);
 
     if(tree_skel_init(atoi(argv[2])) < 0){
-        printf("Error Creating the tree\n");
+        printf("Error creating the tree or initiating the secondary threads\n");
+        closing_handler(-1);
         return -1;
     }
 

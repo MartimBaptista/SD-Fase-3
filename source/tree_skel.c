@@ -6,17 +6,17 @@
 #include <string.h>
 #include <stdio.h>
 #include <pthread.h>
+#include<unistd.h>
 
 
 struct tree_t *tree;
 int last_assigned;
 struct request_t *queue_head;
-pthread_t *threads[1024];
+
+pthread_t **threads;
 size_t threads_amount = 0;
+
 int CLOSE_PROGRAM = 0;
-
-
-// void * process_request (void *params);
 
 /* Inicia o skeleton da árvore. 
  * O main() do servidor deve chamar esta função antes de poder usar a 
@@ -28,26 +28,25 @@ int CLOSE_PROGRAM = 0;
 int tree_skel_init(int N){
     tree = tree_create();
 
-    printf("Vou iniciar as %d threads\n", N);
+    if(tree == NULL)
+        return -1;
 
     threads_amount = N;
-    
-    //TODO create threads
 
-    if (N < 1)
+    if (threads_amount < 1)
     {
         return -1;
     }
-    
+
+    // printf("Vou iniciar as %ld threads\n", threads_amount);
+
+    threads = malloc(sizeof(pthread_t *) * threads_amount);    
 
     for (int i = 0; i < threads_amount; i++) {
         threads[i] = malloc(sizeof(pthread_t));
-        pthread_create(threads[i], NULL, process_request, i + 1);    
-        pthread_detach(threads[i]);
+        int id = i + 1;
+        pthread_create(threads[i], NULL, process_request, (void *) (intptr_t) id);
     }
-
-    if(tree == NULL)
-        return -1;
 
     return 0;
 }
@@ -55,19 +54,18 @@ int tree_skel_init(int N){
 /* Função da thread secundária que vai processar pedidos de escrita. 
 */ 
 void * process_request (void *params){
+    int id = (intptr_t) params;
     //TODO - threads function
 
     while (1)
     {
-        // printf("thread: %d\n", (int ) params);
-        sleep(10);
+        sleep(1);
 
         if (CLOSE_PROGRAM)
         {
-            puts("Thread closing");
+            // printf("  Thread %d closing\n", id);
             pthread_exit(NULL);
         }
-        
     }
 
     return 0;
@@ -80,14 +78,13 @@ void tree_skel_destroy(){
 
     tree_destroy(tree);
     
-    // size_t thread_amount = sizeof(threads) / sizeof(threads[0]);
-    for (size_t i = 0; i < threads_amount && threads[i] != NULL; i++)
-    {
-        // puts("Waiting thread");
-        // void **ret;
-        // pthread_join(threads[i], ret);
+    for (size_t i = 0; i < threads_amount; i++)
+    {   
+        pthread_join(*threads[i], NULL);
+        free(threads[i]);
     }
 
+    free(threads);
 }
 
 /* Executa uma operação na árvore (indicada pelo opcode contido em msg)
