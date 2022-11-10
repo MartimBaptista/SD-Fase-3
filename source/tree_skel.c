@@ -103,10 +103,7 @@ void * process_request (void *params){
         //free() request elements
 
         //lock op_proc
-        //while(op_max != op_n){
-            //update op_proc.max_proc unless max is not the previous (max + 1 != op_n) in which case pthread_cond_wait(op_proc_not_new_max ,op_proc_lock) to let the previous update max first.
-        //}
-        //pthread_cond_broadcast(op_proc_not_new_max)
+        //update op_proc.max_proc unless op_n is smaller (aka, not the new max)
         //unlock op_proc
     }
     return 0;
