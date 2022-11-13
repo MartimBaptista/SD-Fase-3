@@ -169,6 +169,7 @@ int network_main_loop(int listening_socket){
 
     desc_set[0].fd = listening_socket; //adiciona listening_socket a desc_set
     desc_set[0].events = POLLIN; 
+    desc_set[0].revents = NULL;
 
     int nfds = 1; //numero de file descriptors
 
@@ -183,6 +184,8 @@ int network_main_loop(int listening_socket){
         }
 
         for(int i = 1; i < nfds; i++){
+
+            // printf("revents[%d]: %d\n", i, desc_set[i].revents);
             if(desc_set[i].revents & POLLIN) {
                 MessageT *msg  = network_receive(desc_set[i].fd);
 

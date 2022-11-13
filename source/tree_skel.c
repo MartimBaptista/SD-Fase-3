@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <pthread.h>
-#include<unistd.h>
+#include <unistd.h>
 
 
 struct request_t { 
@@ -88,6 +88,9 @@ int tree_skel_init(int N){
 }
 
 void queue_add_task(struct request_t *request){
+
+    if (CLOSE_PROGRAM) return;
+    
     pthread_mutex_lock(&queue_lock);
     if (queue_head == NULL){ /* Adiciona na cabeça da fila */
         queue_head = request;
@@ -106,10 +109,20 @@ void queue_add_task(struct request_t *request){
 
 struct request_t *queue_get_task(){
     pthread_mutex_lock(&queue_lock);
-    while (queue_head == NULL)
+
+    while (queue_head == NULL) {
         pthread_cond_wait(&queue_not_empty, &queue_lock); /* Espera haver algo */
+        
+        if (CLOSE_PROGRAM)
+        {
+            pthread_mutex_unlock(&queue_lock);
+            return NULL;
+        }
+    }
+
     struct request_t *task = queue_head;
     queue_head = task->next;
+
     pthread_mutex_unlock(&queue_lock);
     return task;
 }
@@ -122,13 +135,57 @@ void * process_request (void *params){
 
     while (1)
     {
-        sleep(1);
+        // sleep(1);
+
+        struct request_t *task = queue_get_task();
 
         if (CLOSE_PROGRAM)
         {
-            // printf("  Thread %d closing\n", id);
+            free(task);
+            printf("  Thread %d closing\n", id);
             pthread_exit(NULL);
         }
+
+        struct data_t *data = task->data;
+        char *key = task->key;
+        int op = task->op;
+        int op_n = task->op_n;
+
+        pthread_mutex_lock(&op_proc_lock);
+        op_proc.in_progress[id - 1] = op_n;
+        // printf("op_proc.in_progress[%d] == %d\n", id, op_proc.in_progress[id - 1]);
+        pthread_mutex_unlock(&op_proc_lock);
+        
+
+        pthread_mutex_lock(&tree_lock);
+        switch (op)
+        {
+            case 0:     // DELETE
+                pthread_mutex_lock(&tree_lock);
+                
+                tree_del(tree, key);
+
+                pthread_mutex_unlock(&tree_lock);
+                break;
+            case 1:     // PUT
+                tree_put(tree, key, data);
+                break;
+        }
+        pthread_mutex_unlock(&tree_lock);
+
+
+        pthread_mutex_lock(&op_proc_lock);
+        op_proc.in_progress[id - 1] = 0;
+
+        if (op_n > op_proc.max_proc)
+        {
+            op_proc.max_proc = op_n;
+        }
+        // printf("op_proc.in_progress[%d] == %d\n", id, op_proc.in_progress[id - 1]);
+        // printf("Max op == %d", op_proc.max_proc);
+        pthread_mutex_unlock(&op_proc_lock);
+
+        // printf("  Thread %d\n", id);
     }
 
     return 0;
@@ -139,10 +196,11 @@ void * process_request (void *params){
 void tree_skel_destroy(){
     CLOSE_PROGRAM = 1;
 
+    for (size_t i = 0; i < threads_amount; i++)
+    {
+        pthread_cond_signal(&queue_not_empty);
+    }
 
-    //destroying tree
-    tree_destroy(tree);
-    
     for (size_t i = 0; i < threads_amount; i++)
     {
         pthread_join(*threads[i], NULL);
@@ -159,7 +217,9 @@ void tree_skel_destroy(){
     pthread_mutex_destroy(&tree_lock);
     pthread_mutex_destroy(&op_proc_lock);
     pthread_cond_destroy(&queue_not_empty);
-
+    
+    //destroying tree
+    tree_destroy(tree);
 }
 
 /* Verifica se a operação identificada por op_n foi executada. 
@@ -168,17 +228,18 @@ int verify(int op_n){
     int ret = 0;
     if(op_n <= 0)
         return -1;
-    pthread_mutex_lock(&op_proc_lock);
     if(op_n <= op_proc.max_proc){
         ret = 1;
+        pthread_mutex_lock(&op_proc_lock);
         for (size_t i = 0; op_proc.in_progress[i] != -1; i++){
+            // printf("ID: %d | op_n: %d | %d\n", i + 1, op_n, op_proc.in_progress[i]);
             if(op_n == op_proc.in_progress[i]){
                 ret = 0;
                 break;
             }
         }
+        pthread_mutex_unlock(&op_proc_lock);
     }
-    pthread_mutex_unlock(&op_proc_lock);
     return (ret);
 }
 
@@ -218,24 +279,24 @@ int invoke(MessageT *msg) {
 
             printf("Requested: del %s\n", msg->entry->key);
 
-        //creating request
-        new_request = malloc(sizeof(struct request_t));
-        //inserting key
-        new_request->key = malloc(strlen(msg->entry->key) + 1);
-        strcpy(new_request->key, msg->entry->key);
-        //setting op and op_n
-        new_request->op = 0;
-        new_request->op_n = last_assigned;
-        last_assigned++;
-        
-        queue_add_task(new_request);
+            //creating request
+            new_request = malloc(sizeof(struct request_t));
+            //inserting key
+            new_request->key = malloc(strlen(msg->entry->key) + 1);
+            strcpy(new_request->key, msg->entry->key);
+            //setting op and op_n
+            new_request->op = 0;
+            new_request->op_n = last_assigned;
+            last_assigned++;
+            
+            queue_add_task(new_request);
 
-        //creating answer msg
-        msg->opcode = MESSAGE_T__OPCODE__OP_DEL + 1;
-        msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
-        msg->op_n = new_request->op_n;
+            //creating answer msg
+            msg->opcode = MESSAGE_T__OPCODE__OP_DEL + 1;
+            msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
+            msg->op_n = new_request->op_n;
 
-        return 0;
+            return 0;
 
         case MESSAGE_T__OPCODE__OP_GET: ;
             printf("Requested: get %s\n", msg->entry->key);
@@ -251,11 +312,11 @@ int invoke(MessageT *msg) {
                 return 0;
             }
 
-        msg->opcode = MESSAGE_T__OPCODE__OP_GET + 1;
-        msg->c_type = MESSAGE_T__C_TYPE__CT_VALUE;
-        msg->entry->data.data = data->data;
-        msg->entry->data.len = data->datasize;
-        return 0;
+            msg->opcode = MESSAGE_T__OPCODE__OP_GET + 1;
+            msg->c_type = MESSAGE_T__C_TYPE__CT_VALUE;
+            msg->entry->data.data = data->data;
+            msg->entry->data.len = data->datasize;
+            return 0;
 
         case MESSAGE_T__OPCODE__OP_PUT: ;
 
@@ -263,56 +324,56 @@ int invoke(MessageT *msg) {
 
             printf("Requested: put %s %s\n", msg->entry->key, (char*)msg->entry->data.data);
 
-        //creating request
-        new_request = malloc(sizeof(struct request_t));
-        //inserting key
-        new_request->key = malloc(strlen(msg->entry->key) + 1);
-        strcpy(new_request->key, msg->entry->key);
-        //inserting data
-        new_request->data = data_create(msg->entry->data.len);
-        memcpy(new_request->data->data, msg->entry->data.data, new_request->data->datasize);
-        //setting op and op_n
-        new_request->op = 1;
-        new_request->op_n = last_assigned;
-        last_assigned++;
-        
-        queue_add_task(new_request);
+            //creating request
+            new_request = malloc(sizeof(struct request_t));
+            //inserting key
+            new_request->key = malloc(strlen(msg->entry->key) + 1);
+            strcpy(new_request->key, msg->entry->key);
+            //inserting data
+            new_request->data = data_create(msg->entry->data.len);
+            memcpy(new_request->data->data, msg->entry->data.data, new_request->data->datasize);
+            //setting op and op_n
+            new_request->op = 1;
+            new_request->op_n = last_assigned;
+            last_assigned++;
+            
+            queue_add_task(new_request);
 
-        //creating answer msg
-        msg->opcode = MESSAGE_T__OPCODE__OP_PUT + 1;
-        msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
-        msg->op_n = new_request->op_n;
+            //creating answer msg
+            msg->opcode = MESSAGE_T__OPCODE__OP_PUT + 1;
+            msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
+            msg->op_n = new_request->op_n;
 
-        return 0;
+            return 0;
 
-        //TDOO: Remove old put (leave for reference)
+            /* TODO: Remove old put (leave for reference)
 
-        // //cria data para tree_put
-        // key = malloc(strlen(msg->entry->key) + 1);
-        // strcpy(key, msg->entry->key);
-        // void * buf = malloc(msg->entry->data.len);
-        // memcpy(buf, msg->entry->data.data, msg->entry->data.len);
-        // data = data_create2(msg->entry->data.len, buf);
+            //cria data para tree_put
+            key = malloc(strlen(msg->entry->key) + 1);
+            strcpy(key, msg->entry->key);
+            void * buf = malloc(msg->entry->data.len);
+            memcpy(buf, msg->entry->data.data, msg->entry->data.len);
+            data = data_create2(msg->entry->data.len, buf);
 
-        // //caso de erro em tree_put
-        // if(tree_put(tree,key,data) == -1 ){
-        //     printf("Error on Put\n");
-        //     return -1;
-        // }
+            //caso de erro em tree_put
+            if(tree_put(tree,key,data) == -1 ){
+                printf("Error on Put\n");
+                return -1;
+            }
 
-        // msg->opcode = MESSAGE_T__OPCODE__OP_PUT + 1;
-        // msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
-        // return 0;
+            msg->opcode = MESSAGE_T__OPCODE__OP_PUT + 1;
+            msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
+            return 0; */
 
-    case MESSAGE_T__OPCODE__OP_VERIFY: ;
-        printf("Requested: verify %d\n", msg->op_n);
+        case MESSAGE_T__OPCODE__OP_VERIFY: ;
+            printf("Requested: verify %d\n", msg->op_n);
 
-        //creating answer msg
-        msg->opcode = MESSAGE_T__OPCODE__OP_VERIFY + 1;
-        msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
-        msg->result = verify(msg->op_n);
+            //creating answer msg
+            msg->opcode = MESSAGE_T__OPCODE__OP_VERIFY + 1;
+            msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
+            msg->result = verify(msg->op_n);
 
-        return 0;
+            return 0;
 
         case MESSAGE_T__OPCODE__OP_GETKEYS: ;
             printf("Requested: getkeys\n");
@@ -331,19 +392,19 @@ int invoke(MessageT *msg) {
             msg->n_keys = tree_size(tree);
             msg->keys = keys;
 
-        return 0;
+            return 0;
 
         case MESSAGE_T__OPCODE__OP_GETVALUES: ;
             printf("Requested: getvalues\n");
 
             void** datas = tree_get_values(tree);
 
-        //caso arvore vazia
-        if(datas == NULL){
-            msg->opcode = MESSAGE_T__OPCODE__OP_BAD;
-            msg->c_type = MESSAGE_T__C_TYPE__CT_BAD;
-            return 0;
-        }
+            //caso arvore vazia
+            if(datas == NULL){
+                msg->opcode = MESSAGE_T__OPCODE__OP_BAD;
+                msg->c_type = MESSAGE_T__C_TYPE__CT_BAD;
+                return 0;
+            }
 
             msg->n_values = tree_size(tree);
             msg->values = malloc(tree_size(tree) * sizeof(ProtobufCBinaryData*));
@@ -362,14 +423,14 @@ int invoke(MessageT *msg) {
             msg->opcode = MESSAGE_T__OPCODE__OP_GETVALUES + 1;
             msg->c_type = MESSAGE_T__C_TYPE__CT_VALUES;
 
-        return 0;
+            return 0;
 
         case MESSAGE_T__OPCODE__OP_ERROR: ;
             printf("Received message signaling error.\n");
             return -1;
         default: ;
             printf("Request not recognised.\n");
-        return -1;
+            return -1;
     }
 
     return -1;
