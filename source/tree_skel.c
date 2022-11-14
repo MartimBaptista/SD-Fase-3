@@ -111,8 +111,8 @@ struct request_t *queue_get_task(){
     pthread_mutex_lock(&queue_lock);
 
     while (queue_head == NULL) {
+        // puts("Thread waiting");
         pthread_cond_wait(&queue_not_empty, &queue_lock); /* Espera haver algo */
-        
         if (CLOSE_PROGRAM)
         {
             pthread_mutex_unlock(&queue_lock);
@@ -120,6 +120,7 @@ struct request_t *queue_get_task(){
         }
     }
 
+    // puts("Started working");
     struct request_t *task = queue_head;
     queue_head = task->next;
 
@@ -161,11 +162,7 @@ void * process_request (void *params){
         switch (op)
         {
             case 0:     // DELETE
-                pthread_mutex_lock(&tree_lock);
-                
                 tree_del(tree, key);
-
-                pthread_mutex_unlock(&tree_lock);
                 break;
             case 1:     // PUT
                 tree_put(tree, key, data);
