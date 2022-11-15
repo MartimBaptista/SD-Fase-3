@@ -169,7 +169,7 @@ int network_main_loop(int listening_socket){
 
     desc_set[0].fd = listening_socket; //adiciona listening_socket a desc_set
     desc_set[0].events = POLLIN; 
-    desc_set[0].revents = NULL;
+    desc_set[0].revents = 0;
 
     int nfds = 1; //numero de file descriptors
 
@@ -199,6 +199,12 @@ int network_main_loop(int listening_socket){
                         msg->opcode = MESSAGE_T__OPCODE__OP_ERROR;
                         msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
                     }
+
+                    /* for (size_t i = 0; i < msg->n_values; i++)
+                    {
+                        printf("  %s\n", msg->values[i].data);
+                    } */
+                    
 
                     if(network_send(desc_set[i].fd, msg) == -1) {
                         close(desc_set[i].fd);

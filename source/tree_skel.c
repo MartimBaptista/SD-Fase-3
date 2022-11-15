@@ -111,7 +111,7 @@ struct request_t *queue_get_task(){
     pthread_mutex_lock(&queue_lock);
 
     while (queue_head == NULL) {
-        // puts("Thread waiting");
+        puts("  Thread waiting");
         pthread_cond_wait(&queue_not_empty, &queue_lock); /* Espera haver algo */
         if (CLOSE_PROGRAM)
         {
@@ -120,7 +120,7 @@ struct request_t *queue_get_task(){
         }
     }
 
-    // puts("Started working");
+    puts("  Started working");
     struct request_t *task = queue_head;
     queue_head = task->next;
 
@@ -151,6 +151,8 @@ void * process_request (void *params){
         char *key = task->key;
         int op = task->op;
         int op_n = task->op_n;
+
+        printf("  Thread %d is processing task %d\n", id, task->op_n);
 
         pthread_mutex_lock(&op_proc_lock);
         op_proc.in_progress[id - 1] = op_n;
@@ -272,8 +274,6 @@ int invoke(MessageT *msg) {
 
         case MESSAGE_T__OPCODE__OP_DEL: ;
 
-            //TODO - assincronous del
-
             printf("Requested: del %s\n", msg->entry->key);
 
             //creating request
@@ -377,6 +377,11 @@ int invoke(MessageT *msg) {
 
             char** keys = tree_get_keys(tree);
 
+            for (size_t i = 0; i < tree_size(tree); i++)
+            {
+                printf("%s\n",keys[i]);
+            }            
+
             //caso arvore vazia
             if(keys == NULL){
                 msg->opcode = MESSAGE_T__OPCODE__OP_BAD;
@@ -404,19 +409,23 @@ int invoke(MessageT *msg) {
             }
 
             msg->n_values = tree_size(tree);
-            msg->values = malloc(tree_size(tree) * sizeof(ProtobufCBinaryData*));
+            msg->values = malloc(msg->n_values * sizeof(ProtobufCBinaryData));
 
-            int i = 0;
-            while(datas[i] != NULL){
+            for (size_t i = 0; i < msg->n_values; i++)
+            {
                 ProtobufCBinaryData data_temp;
                 data = (struct data_t*)datas[i];
                 data_temp.len = data->datasize;
                 data_temp.data = malloc(data->datasize);
                 memcpy(data_temp.data, data->data, data->datasize);
                 msg->values[i] = data_temp;
-                i++;
             }
 
+            /* for (size_t i = 0; i < msg->n_values; i++)
+            {
+                printf("  %s | size: %d\n", msg->values[i].data, msg->values[i].len);
+            } */
+            
             msg->opcode = MESSAGE_T__OPCODE__OP_GETVALUES + 1;
             msg->c_type = MESSAGE_T__C_TYPE__CT_VALUES;
 

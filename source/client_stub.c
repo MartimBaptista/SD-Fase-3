@@ -225,7 +225,7 @@ char **rtree_get_keys(struct rtree_t *rtree) {
     int n_keys = answer->n_keys;
     char **ret;
 
-    ret = malloc(sizeof(char *) * n_keys);
+    ret = calloc(n_keys + 1, sizeof(char *));
 
     for (size_t i = 0; i < n_keys; i++) {
         ret[i] = malloc(strlen(answer->keys[i]) + 1);
@@ -266,9 +266,9 @@ void **rtree_get_values(struct rtree_t *rtree) {
 
     ret[n_values] = NULL;
 
-    for (size_t i = 0; i < n_values; i++){
-        printf("%s\n", (char*)ret[i]->data);
-    }
+    /* for (size_t i = 0; i < n_values; i++){
+        printf("  %s\n", (char*)ret[i]->data);
+    } */
 
     return (void**)ret;
 }
