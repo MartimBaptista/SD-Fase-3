@@ -257,16 +257,22 @@ int invoke(MessageT *msg) {
         case MESSAGE_T__OPCODE__OP_SIZE: ;
             printf("Requested: size\n");
 
+            pthread_mutex_lock(&tree_lock);
+            msg->result = tree_size(tree);
+            pthread_mutex_unlock(&tree_lock);
+
             msg->opcode = MESSAGE_T__OPCODE__OP_SIZE + 1;
             msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
-            msg->result = tree_size(tree);
             return 0;
 
 
         case MESSAGE_T__OPCODE__OP_HEIGHT: ;
             printf("Requested: height\n");
 
+            pthread_mutex_lock(&tree_lock);
             msg->result = tree_height(tree);
+            pthread_mutex_unlock(&tree_lock);
+
             msg->opcode = MESSAGE_T__OPCODE__OP_HEIGHT + 1;
             msg->c_type = MESSAGE_T__C_TYPE__CT_RESULT;
             return 0;
@@ -298,7 +304,9 @@ int invoke(MessageT *msg) {
         case MESSAGE_T__OPCODE__OP_GET: ;
             printf("Requested: get %s\n", msg->entry->key);
 
+            pthread_mutex_lock(&tree_lock);
             data = tree_get(tree, msg->entry->key);
+            pthread_mutex_unlock(&tree_lock);
 
             //caso a key nao esteja presente
             if(data == NULL){
@@ -343,25 +351,6 @@ int invoke(MessageT *msg) {
 
             return 0;
 
-            /* TODO: Remove old put (leave for reference)
-
-            //cria data para tree_put
-            key = malloc(strlen(msg->entry->key) + 1);
-            strcpy(key, msg->entry->key);
-            void * buf = malloc(msg->entry->data.len);
-            memcpy(buf, msg->entry->data.data, msg->entry->data.len);
-            data = data_create2(msg->entry->data.len, buf);
-
-            //caso de erro em tree_put
-            if(tree_put(tree,key,data) == -1 ){
-                printf("Error on Put\n");
-                return -1;
-            }
-
-            msg->opcode = MESSAGE_T__OPCODE__OP_PUT + 1;
-            msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
-            return 0; */
-
         case MESSAGE_T__OPCODE__OP_VERIFY: ;
             printf("Requested: verify %d\n", msg->op_n);
 
@@ -375,12 +364,13 @@ int invoke(MessageT *msg) {
         case MESSAGE_T__OPCODE__OP_GETKEYS: ;
             printf("Requested: getkeys\n");
 
+            pthread_mutex_lock(&tree_lock);
             char** keys = tree_get_keys(tree);
 
-            for (size_t i = 0; i < tree_size(tree); i++)
-            {
+            for (size_t i = 0; i < tree_size(tree); i++){
                 printf("%s\n",keys[i]);
-            }            
+            }
+            pthread_mutex_unlock(&tree_lock);
 
             //caso arvore vazia
             if(keys == NULL){
@@ -391,7 +381,9 @@ int invoke(MessageT *msg) {
 
             msg->opcode = MESSAGE_T__OPCODE__OP_GETKEYS + 1;
             msg->c_type = MESSAGE_T__C_TYPE__CT_KEYS;
+            pthread_mutex_lock(&tree_lock);
             msg->n_keys = tree_size(tree);
+            pthread_mutex_unlock(&tree_lock);
             msg->keys = keys;
 
             return 0;
@@ -399,7 +391,9 @@ int invoke(MessageT *msg) {
         case MESSAGE_T__OPCODE__OP_GETVALUES: ;
             printf("Requested: getvalues\n");
 
+            pthread_mutex_lock(&tree_lock);
             void** datas = tree_get_values(tree);
+            pthread_mutex_unlock(&tree_lock);
 
             //caso arvore vazia
             if(datas == NULL){
@@ -408,7 +402,10 @@ int invoke(MessageT *msg) {
                 return 0;
             }
 
+            pthread_mutex_lock(&tree_lock);
             msg->n_values = tree_size(tree);
+            pthread_mutex_unlock(&tree_lock);
+
             msg->values = malloc(msg->n_values * sizeof(ProtobufCBinaryData));
 
             for (size_t i = 0; i < msg->n_values; i++)
@@ -420,11 +417,6 @@ int invoke(MessageT *msg) {
                 memcpy(data_temp.data, data->data, data->datasize);
                 msg->values[i] = data_temp;
             }
-
-            /* for (size_t i = 0; i < msg->n_values; i++)
-            {
-                printf("  %s | size: %d\n", msg->values[i].data, msg->values[i].len);
-            } */
             
             msg->opcode = MESSAGE_T__OPCODE__OP_GETVALUES + 1;
             msg->c_type = MESSAGE_T__C_TYPE__CT_VALUES;
