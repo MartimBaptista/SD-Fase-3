@@ -132,7 +132,6 @@ struct request_t *queue_get_task(){
 */ 
 void * process_request (void *params){
     int id = (intptr_t) params;
-    //TODO: use pthread_cond_broadcast when locked after trying to increassing proc_max when porc_max is not op_n - 1 (waiting for previous)
 
     while (1)
     {
