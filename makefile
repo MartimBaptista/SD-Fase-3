@@ -7,10 +7,10 @@ cliente-lib.o:	required_dirs $(OBJ_C)
 	ld -r $(addprefix object/,$(OBJ_C)) -o object/cliente-lib.o
 
 tree-client: required_dirs cliente-lib.o tree_client.o
-	gcc object/cliente-lib.o object/tree_client.o -lprotobuf-c -o binary/tree-client
+	gcc object/cliente-lib.o object/tree_client.o -lpthread -lprotobuf-c -o binary/tree-client
 
 tree-server: required_dirs $(OBJ_S) 
-	gcc $(addprefix object/,$(OBJ_S)) -lprotobuf-c -o binary/tree-server
+	gcc $(addprefix object/,$(OBJ_S)) -lpthread -lprotobuf-c -o binary/tree-server
 
 tree.o:
 	cp extra_obj/tree.o.extra object/tree.o
