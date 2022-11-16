@@ -74,8 +74,6 @@ int tree_skel_init(int N){
         return -1;
     }
 
-    // printf("Vou iniciar as %ld threads\n", threads_amount);
-
     threads = malloc(sizeof(pthread_t *) * threads_amount);    
 
     for (int i = 0; i < threads_amount; i++) {
@@ -110,11 +108,15 @@ void queue_add_task(struct request_t *request){
 struct request_t *queue_get_task(){
     pthread_mutex_lock(&queue_lock);
 
+    if (CLOSE_PROGRAM){
+        pthread_mutex_unlock(&queue_lock);
+        return NULL;
+    }
+
     while (queue_head == NULL) {
         puts("  Thread waiting");
         pthread_cond_wait(&queue_not_empty, &queue_lock); /* Espera haver algo */
-        if (CLOSE_PROGRAM)
-        {
+        if (CLOSE_PROGRAM){
             pthread_mutex_unlock(&queue_lock);
             return NULL;
         }
@@ -128,6 +130,31 @@ struct request_t *queue_get_task(){
     return task;
 }
 
+void add_to_in_progress(int op_n){
+    pthread_mutex_lock(&op_proc_lock);
+    
+    int i = 0;
+    while (op_proc.in_progress[i] != 0)
+        i++;
+    op_proc.in_progress[i] = op_n;
+    
+    pthread_mutex_unlock(&op_proc_lock);
+}
+
+void remove_from_in_progress(int op_n){
+    pthread_mutex_lock(&op_proc_lock);
+
+    int i = 0;
+    while (op_proc.in_progress[i] != op_n)
+        i++;
+    op_proc.in_progress[i] = 0;
+
+    if (op_n > op_proc.max_proc)
+            op_proc.max_proc = op_n;
+
+    pthread_mutex_unlock(&op_proc_lock);
+}
+
 /* Função da thread secundária que vai processar pedidos de escrita. 
 */ 
 void * process_request (void *params){
@@ -135,15 +162,16 @@ void * process_request (void *params){
 
     while (1)
     {
-        // sleep(1);
-
         struct request_t *task = queue_get_task();
 
-        if (CLOSE_PROGRAM)
-        {
+        if (CLOSE_PROGRAM){
             free(task);
+            if(id > 1){
+                while (threads[id - 2] != NULL){}
+            }
             printf("  Thread %d closing\n", id);
             pthread_exit(NULL);
+            
         }
 
         struct data_t *data = task->data;
@@ -151,39 +179,29 @@ void * process_request (void *params){
         int op = task->op;
         int op_n = task->op_n;
 
-        printf("  Thread %d is processing task %d\n", id, task->op_n);
+        printf("  Thread %d started processing task %d\n", id, task->op_n);
 
-        pthread_mutex_lock(&op_proc_lock);
-        op_proc.in_progress[id - 1] = op_n;
-        // printf("op_proc.in_progress[%d] == %d\n", id, op_proc.in_progress[id - 1]);
-        pthread_mutex_unlock(&op_proc_lock);
-        
+        add_to_in_progress(op_n);
 
         pthread_mutex_lock(&tree_lock);
         switch (op)
         {
             case 0:     // DELETE
+                sleep(20);
                 tree_del(tree, key);
                 break;
             case 1:     // PUT
+                sleep(10);
                 tree_put(tree, key, data);
                 break;
         }
         pthread_mutex_unlock(&tree_lock);
 
+        remove_from_in_progress(op_n);
 
-        pthread_mutex_lock(&op_proc_lock);
-        op_proc.in_progress[id - 1] = 0;
+        printf("  Thread %d finished processing task %d\n", id, task->op_n);
 
-        if (op_n > op_proc.max_proc)
-        {
-            op_proc.max_proc = op_n;
-        }
-        // printf("op_proc.in_progress[%d] == %d\n", id, op_proc.in_progress[id - 1]);
-        // printf("Max op == %d", op_proc.max_proc);
-        pthread_mutex_unlock(&op_proc_lock);
-
-        // printf("  Thread %d\n", id);
+        free(task);
     }
 
     return 0;
@@ -194,15 +212,14 @@ void * process_request (void *params){
 void tree_skel_destroy(){
     CLOSE_PROGRAM = 1;
 
-    for (size_t i = 0; i < threads_amount; i++)
-    {
+    for (size_t i = 0; i < threads_amount; i++){
         pthread_cond_signal(&queue_not_empty);
     }
 
-    for (size_t i = 0; i < threads_amount; i++)
-    {
+    for (size_t i = 0; i < threads_amount; i++){
         pthread_join(*threads[i], NULL);
         free(threads[i]);
+        threads[i] = NULL;
     }
 
     free(threads);
@@ -230,7 +247,6 @@ int verify(int op_n){
         ret = 1;
         pthread_mutex_lock(&op_proc_lock);
         for (size_t i = 0; op_proc.in_progress[i] != -1; i++){
-            // printf("ID: %d | op_n: %d | %d\n", i + 1, op_n, op_proc.in_progress[i]);
             if(op_n == op_proc.in_progress[i]){
                 ret = 0;
                 break;
