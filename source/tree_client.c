@@ -122,12 +122,14 @@ int main(int argc, char *argv[]){
                 //In case there is an entry with that key
                 if(strcmp(strerror(errno), "Success") == 0){
                     printf("Key not found on tree.\n");
+                    free(key);
                     continue;
                 }
                 //In case there isn't an entry with that key
                 else{
-                perror("Error on get");
-                continue;
+                    perror("Error on get");
+                    free(key);
+                    continue;
                 }
             }
             printf("Key %s has the following data: %s\n", key, (char*)data->data);
@@ -197,11 +199,13 @@ int main(int argc, char *argv[]){
             printf("Keys of Tree: {");
             for (size_t i = 0; keys[i] != NULL; i++){
                 printf("%s", keys[i]);
+                free(keys[i]);
                 if (keys[i + 1] != NULL){
                     printf(", ");
                 }
             }
             printf("}\n");
+            free(keys);
         }
 
         //CASE GETVALUES:
@@ -213,12 +217,15 @@ int main(int argc, char *argv[]){
             while(datas[i] != NULL){
                 struct data_t* data = (struct data_t*)datas[i];
                 printf("%s", (char *)data->data);
+                free(data->data);
+                free(datas[i]);
                 if (datas[i + 1] != NULL){
                     printf(", ");
                 }
                 i++;
             }
             printf("}\n");
+            free(datas);
         }
 
         //CASE QUIT:

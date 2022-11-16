@@ -2,16 +2,12 @@
 #include "client_stub-private.h"
 #include "inet.h"
 
-/* Remote tree. A definir pelo grupo em client_stub-private.h
- */
-struct rtree_t;
-
 /* Função para estabelecer uma associação entre o cliente e o servidor, 
  * em que address_port é uma string no formato <hostname>:<port>.
  * Retorna NULL em caso de erro.
  */
 struct rtree_t *rtree_connect(const char *address_port) {
-    struct rtree_t *rtree = malloc(sizeof(rtree));
+    struct rtree_t *rtree = malloc(sizeof(struct rtree_t));
     rtree->server = malloc(sizeof(struct sockaddr_in));
     char* ip = strtok((char*)address_port, ":");
     int port = atoi(strtok(NULL, ":"));
@@ -38,9 +34,10 @@ int rtree_disconnect(struct rtree_t *rtree) {
     msg.opcode = MESSAGE_T__OPCODE__OP_DISCONNECT;
     network_send_receive(rtree, &msg);
 
-    int resp = network_close(rtree);
+    int ret = network_close(rtree);
+    free(rtree->server);
     free(rtree);
-    return resp;
+    return ret;
 }
 
 /* Função para adicionar um elemento na árvore.
@@ -50,6 +47,7 @@ int rtree_disconnect(struct rtree_t *rtree) {
 int rtree_put(struct rtree_t *rtree, struct entry_t *entry) {
     MessageT msg;
     MessageT__Entry msg_entry;
+    int ret;
 
     //Create msg
     message_t__init(&msg);
@@ -77,11 +75,14 @@ int rtree_put(struct rtree_t *rtree, struct entry_t *entry) {
     free(msg_entry.key);
     free(msg_entry.data.data);
     
-    if (answer->opcode == MESSAGE_T__OPCODE__OP_PUT + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT){
-        return answer->op_n;
-    }
+    if (answer->opcode == MESSAGE_T__OPCODE__OP_PUT + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT)
+        ret = answer->op_n;
+    else
+        ret = -1;
 
-    return -1; 
+    message_t__free_unpacked(answer, NULL);
+
+    return ret; 
 }
 
 /* Função para obter um elemento da árvore.
@@ -90,6 +91,7 @@ int rtree_put(struct rtree_t *rtree, struct entry_t *entry) {
 struct data_t *rtree_get(struct rtree_t *rtree, char *key) {
     MessageT msg;
     MessageT__Entry msg_entry;
+    struct data_t *ret;
 
     //Create msg
     message_t__init(&msg);
@@ -114,17 +116,19 @@ struct data_t *rtree_get(struct rtree_t *rtree, char *key) {
     if (answer->opcode == MESSAGE_T__OPCODE__OP_GET + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_VALUE){
         //In case there is an entry with that key
         if(answer->c_type == MESSAGE_T__C_TYPE__CT_VALUE){
-            struct data_t *ret = data_create(answer->entry->data.len);
+            ret = data_create(answer->entry->data.len);
             memcpy(ret->data, answer->entry->data.data, ret->datasize);     
-            return ret;
         }
         //In case there isn't an entry with that key
-        else if(answer->c_type == MESSAGE_T__C_TYPE__CT_NONE){
-            return NULL; //TODO: maybe return something else?
-        }
+        else if(answer->c_type == MESSAGE_T__C_TYPE__CT_NONE)
+            ret = NULL;
     }
+    else
+        ret = NULL;
 
-    return NULL; 
+    message_t__free_unpacked(answer, NULL);
+
+    return ret; 
 }
 
 /* Função para remover um elemento da árvore. Vai libertar 
@@ -134,6 +138,7 @@ struct data_t *rtree_get(struct rtree_t *rtree, char *key) {
 int rtree_del(struct rtree_t *rtree, char *key) {
     MessageT msg;
     MessageT__Entry msg_entry;
+    int ret;
 
     //Create msg
     message_t__init(&msg);
@@ -155,17 +160,21 @@ int rtree_del(struct rtree_t *rtree, char *key) {
     MessageT *answer = network_send_receive(rtree,&msg);
     free(msg_entry.key);
 
-    if (answer->opcode == MESSAGE_T__OPCODE__OP_DEL + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT){
-        return answer->op_n;
-    }
+    if (answer->opcode == MESSAGE_T__OPCODE__OP_DEL + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT)
+        ret = answer->op_n;
+    else
+        ret = -1;
+
+    message_t__free_unpacked(answer, NULL);
     
-    return -1; 
+    return ret; 
 }
 
 /* Devolve o número de elementos contidos na árvore.
  */
 int rtree_size(struct rtree_t *rtree) {
     MessageT msg;
+    int ret;
 
     message_t__init(&msg);
 
@@ -176,17 +185,21 @@ int rtree_size(struct rtree_t *rtree) {
     // send message
     MessageT *answer = network_send_receive(rtree, &msg);
 
-    if (answer->opcode == MESSAGE_T__OPCODE__OP_SIZE + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT){
-        return answer->result;
-    }
+    if (answer->opcode == MESSAGE_T__OPCODE__OP_SIZE + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT)
+        ret = answer->result;
+    else
+        ret = -1;
+
+    message_t__free_unpacked(answer, NULL);
     
-    return -1;
+    return ret;
 }
 
 /* Função que devolve a altura da árvore.
  */
 int rtree_height(struct rtree_t *rtree) {
     MessageT msg;
+    int ret;
 
     message_t__init(&msg);
 
@@ -197,11 +210,14 @@ int rtree_height(struct rtree_t *rtree) {
     // send message
     MessageT *answer = network_send_receive(rtree, &msg);
 
-    if (answer->opcode == MESSAGE_T__OPCODE__OP_HEIGHT + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT){
-        return answer->result;
-    }
+    if (answer->opcode == MESSAGE_T__OPCODE__OP_HEIGHT + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT)
+        ret = answer->result;
+    else
+        ret = -1;
     
-    return -1; 
+    message_t__free_unpacked(answer, NULL);
+
+    return ret; 
 }
 
 /* Devolve um array de char* com a cópia de todas as keys da árvore,
@@ -209,6 +225,8 @@ int rtree_height(struct rtree_t *rtree) {
  */
 char **rtree_get_keys(struct rtree_t *rtree) {
     MessageT msg;
+    int n_keys;
+    char **ret;
 
     message_t__init(&msg);
 
@@ -222,8 +240,7 @@ char **rtree_get_keys(struct rtree_t *rtree) {
         return NULL;
     }
     
-    int n_keys = answer->n_keys;
-    char **ret;
+    n_keys = answer->n_keys;
 
     ret = calloc(n_keys + 1, sizeof(char *));
 
@@ -231,6 +248,8 @@ char **rtree_get_keys(struct rtree_t *rtree) {
         ret[i] = malloc(strlen(answer->keys[i]) + 1);
         strcpy(ret[i], answer->keys[i]);
     }
+
+    message_t__free_unpacked(answer, NULL);
 
     return ret;    
 }
@@ -266,9 +285,7 @@ void **rtree_get_values(struct rtree_t *rtree) {
 
     ret[n_values] = NULL;
 
-    /* for (size_t i = 0; i < n_values; i++){
-        printf("  %s\n", (char*)ret[i]->data);
-    } */
+    message_t__free_unpacked(answer, NULL);
 
     return (void**)ret;
 }
@@ -277,6 +294,7 @@ void **rtree_get_values(struct rtree_t *rtree) {
  */ 
 int rtree_verify(struct rtree_t *rtree, int op_n){
     MessageT msg;
+    int ret;
 
     message_t__init(&msg);
 
@@ -287,9 +305,12 @@ int rtree_verify(struct rtree_t *rtree, int op_n){
 
     MessageT *answer = network_send_receive(rtree, &msg);
 
-    if (answer->opcode == MESSAGE_T__OPCODE__OP_VERIFY + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT){
-        return answer->result;
-    }
+    if (answer->opcode == MESSAGE_T__OPCODE__OP_VERIFY + 1 && answer->c_type == MESSAGE_T__C_TYPE__CT_RESULT)
+        ret = answer->result;
+    else
+        ret = -1;
+
+    message_t__free_unpacked(answer, NULL);
     
-    return -1;
+    return ret;
 }

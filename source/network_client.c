@@ -93,10 +93,12 @@ MessageT *network_send_receive(struct rtree_t * rtree, MessageT *msg){
     if(write_all(rtree->client_sockfd, buf, size) < 0){
         perror("Erro ao enviar dados ao servidor");
         close(rtree->client_sockfd);
+        free(buf);
         return NULL;
     }
 
     if(msg->opcode == MESSAGE_T__OPCODE__OP_DISCONNECT){ //Disconnect
+        free(buf);
         return NULL;
     }
 
