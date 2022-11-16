@@ -1,3 +1,7 @@
+#Trabalho realisado por: Martim Baptista Nº56323
+#                        Martim Paraíba Nº56273
+#                        Daniel Luis Nº56362
+
 OBJ_C = entry.o data.o client_stub.o network_client.o sdmessage.pb-c.o
 OBJ_S = tree_server.o entry.o data.o tree.o tree_skel.o network_server.o sdmessage.pb-c.o
 
