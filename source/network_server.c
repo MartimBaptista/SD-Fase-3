@@ -114,7 +114,7 @@ MessageT *network_receive(int client_socket){
     printf("Received message\n");
 
     MessageT *res; 
-    res = message_t__unpack(NULL, size, buf);
+    res = message_t__unpack(NULL, size, buf); //TODO: NOT FREAD
 
     return res;
 }
@@ -130,7 +130,7 @@ int network_send(int client_socket, MessageT *msg){
     int size = message_t__get_packed_size(msg);
     int size_n = htonl(size);
 
-    uint8_t *buf = malloc(size);
+    uint8_t *buf = malloc(size); //TODO: NOT FREAD
     message_t__pack(msg, buf);
 
     if(write_all(client_socket, &size_n, sizeof(int)) < 0){
@@ -200,12 +200,6 @@ int network_main_loop(int listening_socket){
                         msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
                     }
 
-                    /* for (size_t i = 0; i < msg->n_values; i++)
-                    {
-                        printf("  %s\n", msg->values[i].data);
-                    } */
-                    
-
                     if(network_send(desc_set[i].fd, msg) == -1) {
                         close(desc_set[i].fd);
                         return -1;
@@ -223,35 +217,6 @@ int network_main_loop(int listening_socket){
     }
     close(listening_socket);
     return 0;
-
-    /* TODO - multiplexagem de clientes
-     *                              --Esboço do algoritmo a ser implementado--
-     *
-     * adiciona listening_socket a desc_set.                            //desc_set corresponde a um conjunto de file descriptors
-     *
-     * while (poll(desc_set) >= 0) {                                     //Espera por dados nos sockets abertos 
-     *   if (listening_socket tem dados para ler) {                      //Verifica se tem novo pedido de conexão
-     *     connsockfd = accept(listening_socket); 
-     *     adiciona connsockfd a desc_set 
-     *   } 
-     *   for (all socket s em desc_set, excluindo listening_socket) {    //Verifica restantes sockets 
-     *     if (s tem dados para ler) { 
-     *       message = network_receive(s); 
-     *       if (message é NULL) {                                       //Sinal de que a conexão foi fechada pelo cliente  
-     *         close(s); 
-     *         remove s de desc_set 
-     *       } else { 
-     *         invoke(message);                                          //Executa pedido contido em message 
-     *         network_send(message);                                    //Envia resposta contida em message 
-     *       } 
-     *     } 
-     *     if (s com erro ou POLLHUP) { 
-     *       close(s); 
-     *       remove s de desc_set 
-     *     } 
-     *   } 
-     * } 
-     */ 
 } 
 
 /* A função network_server_close() liberta os recursos alocados por

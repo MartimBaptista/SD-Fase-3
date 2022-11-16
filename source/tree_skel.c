@@ -281,7 +281,7 @@ int invoke(MessageT *msg) {
             printf("Requested: del %s\n", msg->entry->key);
 
             //creating request
-            new_request = malloc(sizeof(struct request_t));
+            new_request = malloc(sizeof(struct request_t)); //TODO: NOT FREAD
             //inserting key
             new_request->key = malloc(strlen(msg->entry->key) + 1);
             strcpy(new_request->key, msg->entry->key);
@@ -303,7 +303,7 @@ int invoke(MessageT *msg) {
             printf("Requested: get %s\n", msg->entry->key);
 
             pthread_mutex_lock(&tree_lock);
-            data = tree_get(tree, msg->entry->key);
+            data = tree_get(tree, msg->entry->key); //TODO: NOT FREAD
             pthread_mutex_unlock(&tree_lock);
 
             //caso a key nao esteja presente
@@ -328,7 +328,7 @@ int invoke(MessageT *msg) {
             printf("Requested: put %s %s\n", msg->entry->key, (char*)msg->entry->data.data);
 
             //creating request
-            new_request = malloc(sizeof(struct request_t));
+            new_request = malloc(sizeof(struct request_t)); //TODO: NOT FREAD
             //inserting key
             new_request->key = malloc(strlen(msg->entry->key) + 1);
             strcpy(new_request->key, msg->entry->key);
@@ -390,7 +390,7 @@ int invoke(MessageT *msg) {
             printf("Requested: getvalues\n");
 
             pthread_mutex_lock(&tree_lock);
-            void** datas = tree_get_values(tree);
+            void** datas = tree_get_values(tree); //TODO: NOT FREAD
             pthread_mutex_unlock(&tree_lock);
 
             //caso arvore vazia

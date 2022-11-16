@@ -19,7 +19,12 @@ struct rtree_t *rtree_connect(const char *address_port) {
     }
     rtree->server->sin_port = htons(port); // Porta TCP
     
-    return network_connect(rtree) == 0? rtree : NULL;
+    if(network_connect(rtree) != 0){
+        free(rtree->server);
+        free(rtree);
+        return NULL;
+    }
+    return rtree;
 }
 
 /* Termina a associação entre o cliente e o servidor, fechando a 
