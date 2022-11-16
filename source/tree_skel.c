@@ -35,7 +35,7 @@ pthread_mutex_t tree_lock;
 pthread_mutex_t op_proc_lock;
 pthread_cond_t queue_not_empty;
 
-pthread_t **threads;
+pthread_t* threads;
 size_t threads_amount = 0;
 
 int CLOSE_PROGRAM = 0;
@@ -59,9 +59,8 @@ int tree_skel_init(int N){
     //Reserving in_progress array and setting last_assigned and max_proc
     last_assigned = 1;
     op_proc.max_proc = 0;
-    op_proc.in_progress = calloc((N + 1), sizeof(int));
-    op_proc.in_progress[N] = -1; //-1 used as terminator
-
+    op_proc.in_progress = calloc((threads_amount + 1), sizeof(int));
+    op_proc.in_progress[threads_amount] = -1; //-1 used as terminator
 
     //Initialising locks
     pthread_mutex_init(&queue_lock, NULL);
@@ -69,17 +68,22 @@ int tree_skel_init(int N){
     pthread_mutex_init(&op_proc_lock, NULL);
     pthread_cond_init(&queue_not_empty, NULL);
 
-    if (threads_amount < 1)
-    {
+    if (threads_amount < 1){
         return -1;
     }
 
-    threads = malloc(sizeof(pthread_t *) * threads_amount);    
+    threads = calloc(threads_amount, sizeof(pthread_t));
 
     for (int i = 0; i < threads_amount; i++) {
-        threads[i] = malloc(sizeof(pthread_t));
         int id = i + 1;
-        pthread_create(threads[i], NULL, process_request, (void *) (intptr_t) id);
+        if(pthread_create(&threads[i], NULL, process_request, (void *) (intptr_t) id) != 0){
+            perror("Error creating thread");
+            exit(0);
+        }
+        if(pthread_detach(threads[i]) != 0){
+            perror("Error detaching thread");
+            exit(0);
+        }
     }
 
     return 0;
@@ -165,7 +169,6 @@ void * process_request (void *params){
         struct request_t *task = queue_get_task();
 
         if (CLOSE_PROGRAM){
-            free(task);
             printf("  Thread %d closing\n", id);
             pthread_exit(NULL);
         }
@@ -183,11 +186,9 @@ void * process_request (void *params){
         switch (op)
         {
             case 0:     // DELETE
-                sleep(10); //TODO: Remove
                 tree_del(tree, key);
                 break;
             case 1:     // PUT
-                sleep(5); //TODO: Remove
                 tree_put(tree, key, data);
                 break;
         }
@@ -197,6 +198,8 @@ void * process_request (void *params){
 
         printf("  Thread %d finished processing task %d\n", id, task->op_n);
 
+        free(task->key);
+        data_destroy(task->data);
         free(task);
     }
 
@@ -212,16 +215,13 @@ void tree_skel_destroy(){
         pthread_cond_signal(&queue_not_empty);
     }
 
-    for (size_t i = 0; i < threads_amount; i++){
-        pthread_join(*threads[i], NULL);
-        free(threads[i]);
-        threads[i] = NULL;
-    }
-
-    free(threads);
+    usleep(threads_amount * 5000); //to give time for the threads to free themslefs
 
     //freeing in_progress array
     free(op_proc.in_progress);
+
+    //freeing list of threads
+    free(threads);
 
     //destroying locks
     pthread_mutex_destroy(&queue_lock);
@@ -331,6 +331,8 @@ int invoke(MessageT *msg) {
             msg->c_type = MESSAGE_T__C_TYPE__CT_VALUE;
             msg->entry->data.data = data->data;
             msg->entry->data.len = data->datasize;
+
+            data_destroy(data);
             return 0;
 
         case MESSAGE_T__OPCODE__OP_PUT: ;
@@ -398,7 +400,7 @@ int invoke(MessageT *msg) {
             printf("Requested: getvalues\n");
 
             pthread_mutex_lock(&tree_lock);
-            void** datas = tree_get_values(tree); //TODO: NOT FREAD
+            void** datas = tree_get_values(tree);
             pthread_mutex_unlock(&tree_lock);
 
             //caso arvore vazia

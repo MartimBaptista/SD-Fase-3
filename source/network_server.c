@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include "sdmessage.pb-c.h"
 #include "tree_skel.h"
+#include "entry.h"
+#include "data.h"
 
 /* Função para preparar uma socket de receção de pedidos de ligação
  * num determinado porto.
@@ -33,7 +35,7 @@ int network_server_init(short port){
     // Preenche estrutura server com endereço(s) para associar (bind) à socket 
     server.sin_family = AF_INET;
     server.sin_port = htons(port); // Porta TCP
-    server.sin_addr.s_addr = htonl(INADDR_ANY); // TODO:vos endereços na máquina
+    server.sin_addr.s_addr = htonl(INADDR_ANY); //todo os endereços na máquina
 
     // Faz bind
     if (bind(listening_socket, (struct sockaddr *) &server, sizeof(server)) < 0){
@@ -103,7 +105,6 @@ MessageT *network_receive(int client_socket){
     }
 
     size = ntohl(size_n);
-    printf("Expecting to receive message of size: %d\n", size);
     uint8_t buf [size];
 
     if(read_all(client_socket, buf, size) < 0){
@@ -111,10 +112,8 @@ MessageT *network_receive(int client_socket){
 		close(client_socket);
     }
 
-    printf("Received message\n");
-
     MessageT *res; 
-    res = message_t__unpack(NULL, size, buf); //TODO: NOT FREAD
+    res = message_t__unpack(NULL, size, buf);
 
     return res;
 }
@@ -130,7 +129,7 @@ int network_send(int client_socket, MessageT *msg){
     int size = message_t__get_packed_size(msg);
     int size_n = htonl(size);
 
-    uint8_t *buf = malloc(size); //TODO: NOT FREAD
+    uint8_t *buf = malloc(size);
     message_t__pack(msg, buf);
 
     if(write_all(client_socket, &size_n, sizeof(int)) < 0){
@@ -142,6 +141,9 @@ int network_send(int client_socket, MessageT *msg){
         perror("Erro ao enviar resposta ao cliente");
     	close(client_socket);
     }
+
+    free(buf);
+    message_t__free_unpacked(msg, NULL);
 
     return 0;
 }
@@ -191,6 +193,7 @@ int network_main_loop(int listening_socket){
 
                 if(msg->opcode == MESSAGE_T__OPCODE__OP_DISCONNECT) {
                     printf("Client number: %d disconnected\n",i);
+                    message_t__free_unpacked(msg, NULL);
                     close(desc_set[i].fd);
                     desc_set[i].fd = -1;
                 } else {
