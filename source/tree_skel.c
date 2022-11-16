@@ -166,12 +166,8 @@ void * process_request (void *params){
 
         if (CLOSE_PROGRAM){
             free(task);
-            if(id > 1){
-                while (threads[id - 2] != NULL){}
-            }
             printf("  Thread %d closing\n", id);
             pthread_exit(NULL);
-            
         }
 
         struct data_t *data = task->data;
@@ -187,11 +183,11 @@ void * process_request (void *params){
         switch (op)
         {
             case 0:     // DELETE
-                sleep(20);
+                sleep(10); //TODO: Remove
                 tree_del(tree, key);
                 break;
             case 1:     // PUT
-                sleep(10);
+                sleep(5); //TODO: Remove
                 tree_put(tree, key, data);
                 break;
         }
@@ -297,7 +293,7 @@ int invoke(MessageT *msg) {
             printf("Requested: del %s\n", msg->entry->key);
 
             //creating request
-            new_request = malloc(sizeof(struct request_t)); //TODO: NOT FREAD
+            new_request = malloc(sizeof(struct request_t));
             //inserting key
             new_request->key = malloc(strlen(msg->entry->key) + 1);
             strcpy(new_request->key, msg->entry->key);
@@ -319,7 +315,7 @@ int invoke(MessageT *msg) {
             printf("Requested: get %s\n", msg->entry->key);
 
             pthread_mutex_lock(&tree_lock);
-            data = tree_get(tree, msg->entry->key); //TODO: NOT FREAD
+            data = tree_get(tree, msg->entry->key);
             pthread_mutex_unlock(&tree_lock);
 
             //caso a key nao esteja presente
@@ -344,7 +340,7 @@ int invoke(MessageT *msg) {
             printf("Requested: put %s %s\n", msg->entry->key, (char*)msg->entry->data.data);
 
             //creating request
-            new_request = malloc(sizeof(struct request_t)); //TODO: NOT FREAD
+            new_request = malloc(sizeof(struct request_t));
             //inserting key
             new_request->key = malloc(strlen(msg->entry->key) + 1);
             strcpy(new_request->key, msg->entry->key);
@@ -380,10 +376,6 @@ int invoke(MessageT *msg) {
 
             pthread_mutex_lock(&tree_lock);
             char** keys = tree_get_keys(tree);
-
-            for (size_t i = 0; i < tree_size(tree); i++){
-                printf("%s\n",keys[i]);
-            }
             pthread_mutex_unlock(&tree_lock);
 
             //caso arvore vazia
@@ -422,15 +414,16 @@ int invoke(MessageT *msg) {
 
             msg->values = malloc(msg->n_values * sizeof(ProtobufCBinaryData));
 
-            for (size_t i = 0; i < msg->n_values; i++)
-            {
+            for (size_t i = 0; i < msg->n_values; i++){
                 ProtobufCBinaryData data_temp;
                 data = (struct data_t*)datas[i];
                 data_temp.len = data->datasize;
                 data_temp.data = malloc(data->datasize);
                 memcpy(data_temp.data, data->data, data->datasize);
                 msg->values[i] = data_temp;
+                data_destroy(data);
             }
+            free(datas);
             
             msg->opcode = MESSAGE_T__OPCODE__OP_GETVALUES + 1;
             msg->c_type = MESSAGE_T__C_TYPE__CT_VALUES;
