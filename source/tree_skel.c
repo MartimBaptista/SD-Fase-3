@@ -248,7 +248,6 @@ int verify(int op_n){
 int invoke(MessageT *msg) {
     MessageT__Opcode op = msg->opcode;
 
-    char * key;
     struct data_t* data;
     struct request_t* new_request;
 
