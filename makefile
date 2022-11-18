@@ -7,10 +7,10 @@ OBJ_S = tree_server.o entry.o data.o tree.o tree_skel.o network_server.o sdmessa
 
 main: tree-client tree-server
 
-cliente-lib.o:	required_dirs $(OBJ_C)
-	ld -r $(addprefix object/,$(OBJ_C)) -o object/cliente-lib.o
+client-lib.o:	required_dirs $(OBJ_C)
+	ld -r $(addprefix object/,$(OBJ_C)) -o object/client-lib.o
 
-tree-client: required_dirs cliente-lib.o tree_client.o
+tree-client: required_dirs client-lib.o tree_client.o
 	gcc object/client-lib.o object/tree_client.o -pthread -lprotobuf-c -o binary/tree-client
 
 tree-server: required_dirs $(OBJ_S) 

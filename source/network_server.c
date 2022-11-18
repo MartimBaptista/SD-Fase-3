@@ -5,7 +5,7 @@ Trabalho realisado por: Martim Baptista Nº56323
 */
 
 #include "inet.h"
-#include <poll.h>
+#include <sys/poll.h>
 #include <errno.h>
 #include <stdlib.h>
 #include "sdmessage.pb-c.h"
@@ -163,14 +163,15 @@ int network_send(int client_socket, MessageT *msg){
  */
 int network_main_loop(int listening_socket){
 
-    int nfdesc = 5;
+    nfds_t nfdesc = 6;  // numero maximo de cliente concorrentes
     int timeout = 60;
 
     struct sockaddr_in client;
     socklen_t size_client = sizeof(client);
     
 
-    struct pollfd desc_set[nfdesc]; // numero maximo de cliente concorrentes
+    struct pollfd desc_set[nfdesc];  // numero maximo de cliente concorrentes
+    int *busyClients = calloc( nfdesc, sizeof(int));  // posições dos clientes que estão ocupadas
 
     for(int i = 0; i < nfdesc; i++)
         desc_set[i].fd = -1;
@@ -179,49 +180,72 @@ int network_main_loop(int listening_socket){
     desc_set[0].events = POLLIN; 
     desc_set[0].revents = 0;
 
-    int nfds = 1; //numero de file descriptors
+    nfds_t nfds = 1; //numero de file descriptors
 
     printf("Server started, waiting for client...\n");
-    while(poll(desc_set, nfds, timeout) >= 0){
+    
+    while(poll(desc_set, nfdesc, timeout) >= 0){
         if ((desc_set[0].revents & POLLIN) && (nfds < nfdesc)) {
-            if((desc_set[nfds].fd = accept(desc_set[0].fd,(struct sockaddr *) &client, &size_client)) > 0){
-                printf("Client number: %d connected\n", nfds);
-                desc_set[nfds].events = POLLIN; //wait for data
+
+            int position = -1;
+
+            for (size_t i = 0; position < 0; i++)
+            {
+                if (busyClients[i] == 0)
+                {
+                    position = i + 1;
+                    busyClients[i] = 1;
+                }
+            }
+                        
+
+            desc_set[position].fd = accept(desc_set[0].fd,(struct sockaddr *) &client, &size_client);
+            if(desc_set[position].fd > 0){
+                printf("Client number: %d connected\n", position);
+                desc_set[position].events = POLLIN; //wait for data
                 nfds++;
             }
         }
+        for(int i = 1; i < nfdesc; i++){
+            if(busyClients[i - 1] == 1) {
 
-        for(int i = 1; i < nfds; i++){
+                // printf("revents[%d]: %d\n", i, desc_set[i].revents);
+                // printf("    A ler do cliente %d", i);
+                // printf("|| desc_set[i].revents & POLLIN == %d", desc_set[i].revents & POLLIN);
+                // puts("");
 
-            // printf("revents[%d]: %d\n", i, desc_set[i].revents);
-            if(desc_set[i].revents & POLLIN) {
-                MessageT *msg  = network_receive(desc_set[i].fd);
+                if(desc_set[i].revents & POLLIN) {
+                    // puts("  A receber mensagem");
+                    MessageT *msg  = network_receive(desc_set[i].fd);
 
-                if(msg->opcode == MESSAGE_T__OPCODE__OP_DISCONNECT) {
-                    printf("Client number: %d disconnected\n",i);
-                    message_t__free_unpacked(msg, NULL);
-                    close(desc_set[i].fd);
-                    desc_set[i].fd = -1;
-                } else {
-                    if(invoke(msg) < 0) {
-                        printf("Error on invoke\n");
-                        msg->opcode = MESSAGE_T__OPCODE__OP_ERROR;
-                        msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
-                    }
-
-                    if(network_send(desc_set[i].fd, msg) == -1) {
+                    if(msg->opcode == MESSAGE_T__OPCODE__OP_DISCONNECT) {
+                        printf("Client number: %d disconnected\n",i);
+                        busyClients[i - 1] = 0;
+                        message_t__free_unpacked(msg, NULL);
                         close(desc_set[i].fd);
-                        return -1;
+                        desc_set[i].fd = -1;
+                    } else {
+                        if(invoke(msg) < 0) {
+                            printf("Error on invoke\n");
+                            msg->opcode = MESSAGE_T__OPCODE__OP_ERROR;
+                            msg->c_type = MESSAGE_T__C_TYPE__CT_NONE;
+                        }
+                    if(network_send(desc_set[i].fd, msg) == -1) {
+                            close(desc_set[i].fd);
+                            return -1;
+                        }
                     }
                 }
             }
         }
 
-        for(int i = 1 ; i < nfds ;i++){  //allows new connections when clients disconnect
-            if(desc_set[i].fd == -1){
+        for(int i = 1 ; i < nfdesc && nfds > 0;i++){  //allows new connections when clients disconnect
+            if (busyClients[i - 1] == 0 && desc_set[i].fd == -1)
+            {
                 desc_set[i].fd = desc_set[nfds].fd;
-                nfds --;
+                nfds--;
             }
+            
         }
     }
     close(listening_socket);
