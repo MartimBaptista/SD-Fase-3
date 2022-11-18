@@ -338,7 +338,8 @@ int invoke(MessageT *msg) {
             msg->entry->data.data = data->data;
             msg->entry->data.len = data->datasize;
 
-            data_destroy(data);
+            free(data);
+
             return 0;
 
         case MESSAGE_T__OPCODE__OP_PUT: ;
